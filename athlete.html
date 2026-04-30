@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>SIT · ATHLETE</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+<style>
+.ath-hd{background:var(--bg0);padding:8px 14px;border-bottom:1px solid var(--b3);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ath-name{font-size:18px;font-weight:700;color:var(--g1);font-family:var(--fu);letter-spacing:1px}
+.ath-pos{font-size:10px;color:var(--a1);font-family:var(--fu)}
+.ath-right{margin-left:auto;display:flex;gap:6px}
+.radar-wrap{position:relative;width:200px;height:200px;margin:0 auto}
+.radar-lbl{position:absolute;font-size:8px;color:var(--t3);font-family:var(--fu);text-align:center;white-space:nowrap}
+</style>
+</head>
+<body class="sit-layout">
+<div id="header"></div>
+<div class="sit-body">
+  <div class="nav-lateral">
+    <div class="nav-section">
+      <div class="nav-sec-hd">Funções</div>
+      <div class="nav-item" onclick="SIT.go('MON')"><span>◉</span><span>MONITOR</span></div>
+      <div class="nav-item" id="nav-back-team"><span>←</span><span>VOLTAR TIME</span></div>
+      <div class="nav-item" onclick="SIT.go('COPA')"><span>🏆</span><span>COPA 2026</span></div>
+      <div class="nav-item" onclick="SIT.go('MRKT')"><span>↔</span><span>MERCADO</span></div>
+    </div>
+    <div class="nav-section"><div class="nav-sec-hd">Elenco</div><div id="nav-squad"></div></div>
+  </div>
+  <div class="sit-content">
+    <div class="ath-hd">
+      <span class="ath-name" id="ath-name">—</span>
+      <span class="ath-pos" id="ath-pos">—</span>
+      <span class="bg" id="ath-rating">—</span>
+      <span id="ath-vpi" style="font-size:11px">—</span>
+      <div class="ath-right">
+        <span class="dim" id="ath-meta" style="font-size:8px"></span>
+        <button onclick="window.history.back()" style="padding:3px 8px;font-size:8px;border:1px solid var(--b2);background:transparent;color:var(--g2);cursor:pointer;font-family:var(--fu)">← BACK</button>
+        <button id="btn-fav" onclick="addFav()" style="padding:3px 8px;font-size:8px;border:1px solid var(--b2);background:transparent;color:var(--a1);cursor:pointer;font-family:var(--fu)">★ FAVE</button>
+        <button onclick="goTeam()" style="padding:3px 8px;font-size:8px;border:1px solid var(--b2);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--fu)" id="btn-team">← TIME</button>
+      </div>
+    </div>
+    <div class="tabs-row" id="tabs"></div>
+    <div style="flex:1;overflow-y:auto;padding:8px 12px" id="tab-content"></div>
+  </div>
+</div>
+<div id="statusbar"></div>
+<script src="sit-db.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+const params   = new URLSearchParams(window.location.search);
+const teamKey  = (params.get('team')||'FLA').toUpperCase();
+const athName  = decodeURIComponent(params.get('athlete')||'');
+const initTab  = (params.get('tab')||'DES').toUpperCase();
+const session  = SIT.boot('ATHLETE','<div class="sb-item">ATHLETE <b id="sb-ath">—</b></div>');
+
+if (session) {
+  const db  = SIT_DB.DB;
+  const tm  = db[teamKey];
+  const ath = tm ? (tm.athletes||[]).find(a=>a.n===athName) : null;
+
+  document.getElementById('nav-back-team').onclick = () => SIT.go(teamKey);
+  document.getElementById('btn-team').textContent  = '← ' + (tm?tm.tk:'TIME');
+
+  if (!ath || !tm) {
+    document.getElementById('tab-content').innerHTML =
+      '<div class="card">Atleta não encontrado. <a href="mon.html" class="lk">← MON</a></div>';
+  } else {
+    document.title = 'SIT · '+ath.n+' / '+tm.tk;
+    document.getElementById('sb-ath').textContent   = ath.n;
+    document.getElementById('ath-name').textContent = ath.n;
+    document.getElementById('ath-pos').textContent  = ath.pos+' · '+tm.tk;
+    const rc = ath.vpi>=80?'buy':ath.vpi>=65?'hold':'sell';
+    document.getElementById('ath-rating').className  = 'bg '+rc;
+    document.getElementById('ath-rating').textContent= (ath.vpi>=80?'BUY':ath.vpi>=65?'HOLD':'SELL')+' '+ath.vpi+'%';
+    document.getElementById('ath-vpi').className    = ath.vpi>=80?'g':ath.vpi>=65?'a':'r';
+    document.getElementById('ath-vpi').textContent  = 'PBI:'+ath.pbi+'%';
+    document.getElementById('ath-meta').textContent = ath.nat+' · '+ath.age+'a · '+tm.n;
+    if (SIT.isFave('athletes',teamKey+'/'+athName))
+      document.getElementById('btn-fav').textContent='★ SAVED';
+    SIT.setBreadcrumb([{label:'MON',href:'MON'},{label:tm.tk,href:teamKey},{label:ath.n}]);
+
+    // Nav squad
+    document.getElementById('nav-squad').innerHTML = (tm.athletes||[]).sort((a,b)=>b.vpi-a.vpi).map(a=>{
+      const act = a.n===athName?' active':'';
+      const url = 'athlete.html?team='+teamKey+'&athlete='+encodeURIComponent(a.n);
+      return '<div class="nav-item'+act+'" onclick="window.location.href=\''+url+'\'" style="gap:4px">'+
+        '<span class="dim" style="font-size:8px;width:28px">'+a.pos+'</span>'+
+        '<span style="flex:1;font-size:9px">'+a.n.split(' ').slice(-1)[0]+'</span>'+
+        '<span class="'+(a.vpi>=80?'g':a.vpi>=65?'a':'r')+'" style="font-size:8px">'+a.vpi+'%</span></div>';
+    }).join('');
+
+    // Tabs
+    const TABS = ['DES','TECH','VPI','HP','GRAHAM','BUFFETT','BLACKROCK','NASH','JUNG','FEYNMANN'];
+    document.getElementById('tabs').innerHTML = TABS.map(tab=>{
+      const dm = ['GRAHAM','BUFFETT','BLACKROCK','NASH','JUNG','FEYNMANN'].includes(tab)?' diamond':'';
+      const on = tab===initTab?' on':'';
+      return '<button class="tab-btn'+on+dm+'" onclick="loadTab(\''+tab+'\',this)">'+tab+'</button>';
+    }).join('');
+    loadTab(initTab, document.querySelector('#tabs .on'));
+  }
+
+  function addFav(){ SIT.addFave('athletes',teamKey+'/'+athName); document.getElementById('btn-fav').textContent='★ SAVED'; }
+  function goTeam(){ window.location.href='team.html?team='+teamKey; }
+
+  function loadTab(tab, btn) {
+    history.replaceState(null,'','athlete.html?team='+teamKey+'&athlete='+encodeURIComponent(athName)+'&tab='+tab);
+    document.querySelectorAll('#tabs .tab-btn').forEach(b=>b.classList.remove('on'));
+    if (btn) btn.classList.add('on');
+    document.getElementById('tab-content').innerHTML = renderTab(tab);
+  }
+
+  function renderTab(tab) {
+    const tm  = SIT_DB.DB[teamKey];
+    const a   = tm?(tm.athletes||[]).find(x=>x.n===athName):null;
+    if (!a) return '';
+    const radarAttrs = ['VEL','TEC','FIS','MEN','TAT','CRI'];
+    const radarVals  = [a.vel||70, a.tec||70, a.fis||70, a.men||70, a.tat||70, a.vpi||70];
+
+    if (tab==='DES') {
+      return '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px">'+
+        '<div class="card-dark"><div class="dim" style="font-size:7px">VPI</div><div class="big '+(a.vpi>=80?'g':a.vpi>=65?'a':'r')+'">'+a.vpi+'%</div></div>'+
+        '<div class="card-dark"><div class="dim" style="font-size:7px">PBI</div><div class="big '+(a.pbi>25?'r':'a')+'">'+a.pbi+'%</div></div>'+
+        '<div class="card-dark"><div class="dim" style="font-size:7px">GOLS</div><div class="big g">'+a.gols+'</div></div>'+
+        '<div class="card-dark"><div class="dim" style="font-size:7px">ASSISTS</div><div class="big a">'+a.ass+'</div></div>'+
+        '<div class="card-dark"><div class="dim" style="font-size:7px">MINUTOS</div><div class="big">'+a.min+'</div></div></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 220px;gap:10px">'+
+        '<div>'+
+        '<div class="sec">IDENTITY DATA</div>'+
+        '<div class="kvg">'+
+        '<div class="kl">NOME COMPLETO</div><div class="kv">'+a.n+'</div>'+
+        '<div class="kl">POSIÇÃO</div><div class="kv">'+a.pos+'</div>'+
+        '<div class="kl">CLUBE</div><div class="kv lk" onclick="window.location.href=\'team.html?team='+teamKey+'\'">'+tm.tk+' — '+tm.n+'</div>'+
+        '<div class="kl">NACIONALIDADE</div><div class="kv">'+a.nat+'</div>'+
+        '<div class="kl">IDADE</div><div class="kv">'+a.age+' anos</div>'+
+        '<div class="kl">SALÁRIO</div><div class="kv g">'+a.sal+'</div>'+
+        '<div class="kl">CLÁUSULA RESCISÓRIA</div><div class="kv r">'+a.clause+'</div>'+
+        '<div class="kl">CONTRATO ATÉ</div><div class="kv a">'+a.ctr+'</div>'+
+        '<div class="kl">VPI</div><div class="kv g">'+a.vpi+'%</div>'+
+        '<div class="kl">PBI</div><div class="kv '+(a.pbi>25?'r':'a')+'">'+a.pbi+'%</div>'+
+        '</div></div>'+
+        '<div>'+
+        '<div class="sec">RADAR SIT-QUANT</div>'+
+        renderRadar(radarAttrs, radarVals)+
+        '</div></div>'+
+        '<div class="sec" style="margin-top:8px">PERFIL DE CARREIRA</div>'+
+        '<div class="card" style="font-size:10px;color:var(--t2);line-height:1.7">'+(a.bio||'Perfil em desenvolvimento.')+'</div>';
+    }
+    if (tab==='TECH') {
+      return '<div class="sec">ANÁLISE TÉCNICA — INDICADORES VPI/PBI</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px">'+
+        radarAttrs.map((attr,i)=>'<div class="card-dark">'+
+          '<div class="dim" style="font-size:7px">'+attr+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">'+
+          '<div style="flex:1;height:4px;background:var(--bg0);border-radius:2px">'+
+          '<div style="width:'+radarVals[i]+'%;height:100%;background:'+(radarVals[i]>=80?'var(--g1)':radarVals[i]>=65?'var(--a1)':'var(--r1)')+';border-radius:2px"></div></div>'+
+          '<span class="'+(radarVals[i]>=80?'g':radarVals[i]>=65?'a':'r')+'" style="font-size:9px;font-weight:700">'+radarVals[i]+'</span>'+
+          '</div></div>'
+        ).join('')+'</div>'+
+        '<div class="sec">COMPARAÇÃO POSICIONAL (LIGA)</div>'+
+        '<table class="dt"><thead><tr><th>MÉTRICA</th><th>'+a.n.split(' ').slice(-1)[0]+'</th><th>MÉD. LIGA</th><th>TOP 10%</th><th>DELTA</th></tr></thead><tbody>'+
+        [
+          {m:'VPI%', v:a.vpi, avg:71.2, top:85.0},
+          {m:'PBI%', v:a.pbi, avg:22.1, top:15.0},
+          {m:'GOLS', v:a.gols, avg:8.4, top:18.0},
+          {m:'ASSIST', v:a.ass, avg:6.2, top:12.0},
+          {m:'MIN/90', v:a.min, avg:2340, top:2800},
+        ].map(row=>{
+          const delta=(row.v-row.avg);
+          return '<tr><td class="dim">'+row.m+'</td>'+
+            '<td class="'+(row.v>=row.top?'g':row.v>=row.avg?'a':'r')+'">'+row.v+'</td>'+
+            '<td class="dim">'+row.avg+'</td>'+
+            '<td class="g">'+row.top+'</td>'+
+            '<td class="'+(delta>=0?'g':'r')+'">'+(delta>=0?'+':'')+delta.toFixed(1)+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    }
+    if (tab==='HP') {
+      return '<div class="sec">HISTÓRICO DE PARTIDAS — ÚLTIMAS ATUAÇÕES</div>'+
+        '<table class="dt"><thead><tr><th>DATA</th><th>ADVERSÁRIO</th><th>PLACAR</th><th>GOLS</th><th>ASS</th><th>VPI</th><th>NOTA</th></tr></thead><tbody>'+
+        (a.matches||[]).map(m=>'<tr>'+
+          '<td class="dim">'+m.d+'</td><td>'+m.adv+'</td>'+
+          '<td class="a" style="font-weight:700">'+m.pl+'</td>'+
+          '<td class="g">'+m.g+'</td><td class="a">'+m.a+'</td>'+
+          '<td class="'+(m.v>=80?'g':m.v>=65?'a':'r')+'">'+m.v+'%</td>'+
+          '<td class="'+(m.nota>=8?'g':m.nota>=6.5?'a':'r')+'">'+m.nota.toFixed(1)+'</td></tr>'
+        ).join('')+'</tbody></table>';
+    }
+    if (['GRAHAM','BUFFETT','BLACKROCK','NASH','JUNG','FEYNMANN'].includes(tab)) {
+      const labels = {
+        GRAHAM:'valor intrínseco e margem de segurança',
+        BUFFETT:'qualidade de franquia e vantagem competitiva de longo prazo',
+        BLACKROCK:'risco sistêmico, exposição macro e correlação de fatores',
+        NASH:'equilíbrio estratégico e teoria dos jogos aplicada',
+        JUNG:'psicometria esportiva e perfil arquetípico',
+        FEYNMANN:'modelagem física de padrões de movimento e eficiência energética'
+      };
+      return '<div class="sec">'+tab+' — ANÁLISE AVANÇADA ◆ DIAMOND</div>'+
+        '<div class="card" style="font-size:10px;color:var(--t2);line-height:1.7">'+
+        'Indicador <b class="p">'+tab+'</b> disponível para assinantes <b class="g">DIAMOND</b>. '+
+        'Aplica modelagem de '+labels[tab]+' ao atleta <b class="g">'+a.n+'</b>.<br><br>'+
+        'VPI atual: <b class="'+(a.vpi>=80?'g':a.vpi>=65?'a':'r')+'">'+a.vpi+'%</b> · '+
+        'PBI atual: <b class="'+(a.pbi>25?'r':'a')+'">'+a.pbi+'%</b></div>';
+    }
+    return '<div class="dim" style="padding:8px;font-size:10px">Tab <span class="a">'+tab+'</span> — em desenvolvimento.</div>';
+  }
+
+  function renderRadar(labels, values) {
+    const N=labels.length, R=80, cx=100, cy=100;
+    const pts = values.map((v,i)=>{ const ang=-Math.PI/2+i*2*Math.PI/N, r=v/100*R; return [cx+r*Math.cos(ang),cy+r*Math.sin(ang)]; });
+    const gridLines = [3,5,7,10].map(g=>{
+      const pct=g*10;
+      return '<polygon points="'+Array.from({length:N},(_,i)=>{const ang=-Math.PI/2+i*2*Math.PI/N,r=pct/100*R;return (cx+r*Math.cos(ang)).toFixed(1)+','+(cy+r*Math.sin(ang)).toFixed(1)}).join(' ')+'" fill="none" stroke="var(--b2)" stroke-width="0.5"/>';
+    }).join('');
+    const axes = Array.from({length:N},(_,i)=>{const ang=-Math.PI/2+i*2*Math.PI/N;return '<line x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R*Math.cos(ang)).toFixed(1)+'" y2="'+(cy+R*Math.sin(ang)).toFixed(1)+'" stroke="var(--b2)" stroke-width="0.5"/>';}).join('');
+    const polygon = '<polygon points="'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')+'" fill="rgba(0,255,65,0.12)" stroke="var(--g1)" stroke-width="1.5"/>';
+    const dots    = pts.map((p,i)=>'<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="2.5" fill="var(--g1)"><title>'+labels[i]+': '+values[i]+'</title></circle>').join('');
+    const lbls    = labels.map((l,i)=>{const ang=-Math.PI/2+i*2*Math.PI/N,r=R+16,x=cx+r*Math.cos(ang),y=cy+r*Math.sin(ang);return '<text x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" fill="var(--t3)" font-size="7" font-family="var(--fu)" text-anchor="middle" dominant-baseline="middle">'+l+'</text>';}).join('');
+    return '<svg viewBox="0 0 200 200" width="200" height="200" style="display:block;margin:0 auto">'+gridLines+axes+polygon+dots+lbls+'</svg>';
+  }
+}
+</script>
+</body>
+</html>

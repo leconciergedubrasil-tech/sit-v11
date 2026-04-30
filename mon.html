@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SIT · MON — Monitor Global</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+<style>
+/* MON-specific grid — 4 painéis como Bloomberg */
+.mon-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 220px;
+  grid-template-rows:1fr 1fr;
+  gap:1px;background:var(--b1);
+  flex:1;overflow:hidden;
+}
+/* NEWS ocupa coluna 1, 2 linhas */
+#p-news{grid-column:1;grid-row:1/3}
+/* WEI ocupa coluna 2, linha 1 */
+#p-wei{grid-column:2;grid-row:1}
+/* MAESTRO ocupa coluna 2, linha 2 */
+#p-mae{grid-column:2;grid-row:2}
+/* FX ocupa coluna 3, linha 1 */
+#p-fx{grid-column:3;grid-row:1}
+/* TIMES ocupa coluna 3, linha 2 */
+#p-teams{grid-column:3;grid-row:2}
+/* STATS ocupa coluna 4, 2 linhas */
+#p-stats{grid-column:4;grid-row:1/3}
+
+/* WEI row */
+.wei-row{
+  display:flex;align-items:center;gap:5px;
+  padding:3px 0;border-bottom:1px solid var(--b0);
+  cursor:pointer;font-size:8.5px;transition:background .1s;
+}
+.wei-row:hover{background:rgba(0,255,65,.03)}
+.wei-flag{font-size:11px;width:18px;text-align:center;flex-shrink:0}
+.wei-name{flex:1;color:var(--t2);font-family:var(--fu);font-size:8.5px}
+.wei-bar-wrap{width:44px;flex-shrink:0}
+.wei-bar{height:2px;background:var(--bg0);border-radius:1px}
+.wei-fill{height:100%;border-radius:1px;transition:width .4s}
+.wei-val{width:32px;text-align:right;font-family:var(--fm);font-size:8.5px;flex-shrink:0}
+.wei-chg{width:34px;text-align:right;font-family:var(--fm);font-size:8px;flex-shrink:0}
+
+/* NEWS card */
+.news-card{
+  display:flex;gap:6px;padding:5px 2px;
+  border-bottom:1px solid var(--b0);cursor:pointer;
+  transition:background .1s;
+}
+.news-card:hover{background:rgba(0,255,65,.02)}
+.news-tag{
+  font-size:6.5px;font-weight:700;padding:1px 4px;
+  font-family:var(--fu);letter-spacing:.6px;flex-shrink:0;
+  border:1px solid;height:fit-content;margin-top:1px;
+}
+.news-title{font-size:9px;color:var(--t1);line-height:1.4;flex:1}
+.news-time{font-size:7px;color:var(--t5);font-family:var(--fu);flex-shrink:0;margin-top:1px}
+
+/* FX row */
+.fx-row{
+  display:flex;align-items:center;gap:0;
+  padding:2.5px 0;border-bottom:1px solid var(--b0);
+  font-size:9px;
+}
+.fx-pair{color:var(--t3);font-family:var(--fu);font-weight:700;width:62px;font-size:8.5px;letter-spacing:.3px}
+.fx-val{color:var(--t1);font-family:var(--fm);flex:1;text-align:right;font-size:9.5px}
+.fx-chg{width:42px;text-align:right;font-family:var(--fm);font-size:8px}
+.fx-spark{width:44px;flex-shrink:0;text-align:right}
+
+/* Team row */
+.team-row{
+  display:flex;align-items:center;gap:5px;
+  padding:3px 0;border-bottom:1px solid var(--b0);
+  cursor:pointer;transition:background .1s;font-size:8.5px;
+}
+.team-row:hover{background:rgba(0,255,65,.03)}
+.team-tk{font-family:var(--fu);font-weight:700;color:var(--a1);width:32px;font-size:8px}
+.team-name{flex:1;color:var(--t2);font-family:var(--fu);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.team-vpi{width:34px;text-align:right;font-family:var(--fm);font-size:9px}
+.team-chg{width:34px;text-align:right;font-family:var(--fm);font-size:8px}
+
+/* Stat items */
+.stat-item{
+  padding:6px 8px;border-bottom:1px solid var(--b1);
+}
+.stat-label{font-size:7px;color:var(--t5);font-family:var(--fu);font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.stat-val{font-size:18px;font-weight:700;font-family:var(--fu);line-height:1.1;margin-top:2px}
+.stat-sub{font-size:7.5px;color:var(--t4);font-family:var(--fu);margin-top:1px}
+.stat-bar{height:2px;background:var(--bg0);border-radius:1px;margin-top:4px}
+.stat-bar-fill{height:100%;border-radius:1px;transition:width .6s}
+</style>
+</head>
+<body class="sit-layout">
+<div id="header"></div>
+
+<div class="sit-body">
+  <!-- NAV LATERAL -->
+  <div class="nav-lateral">
+    <div class="nav-section">
+      <div class="nav-sec-hd">Módulos</div>
+      <div class="nav-item active" onclick="SIT.go('MON')">
+        <span class="g" style="font-size:7px">◉</span>
+        <span>MON · MONITOR</span>
+        <span class="nav-item-val g" style="font-size:7px">L1</span>
+      </div>
+      <div class="nav-item" onclick="SIT.go('COPA')">
+        <span style="font-size:9px">🏆</span><span>COPA 2026</span>
+      </div>
+      <div class="nav-item" onclick="SIT.go('H2H')">
+        <span class="t3">⇄</span><span>H2H · HEAD-TO-HEAD</span>
+      </div>
+      <div class="nav-item" onclick="SIT.go('MRKT')">
+        <span class="t3">↔</span><span>MRKT · TRANSFERÊNCIAS</span>
+      </div>
+      <div class="nav-item" onclick="SIT.go('ECO')">
+        <span class="t3">≡</span><span>ECO · MACRO</span>
+      </div>
+      <div class="nav-item" onclick="SIT.go('FX')">
+        <span class="t3">$</span><span>FX · CÂMBIO</span>
+      </div>
+      <div class="nav-item" onclick="SIT.go('FAVE')">
+        <span class="a">★</span><span>FAVE · FAVORITOS</span>
+      </div>
+      <div class="nav-item" onclick="SIT.go('ALERT')">
+        <span class="r">⚡</span><span>ALERT · ALERTAS</span>
+      </div>
+      <div class="nav-item" onclick="SIT.go('HELP')">
+        <span class="t3">?</span><span>HELP · MANUAL</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-hd">Times</div>
+      <div id="nav-teams"></div>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO: 4 painéis -->
+  <div class="sit-content">
+    <div class="mon-grid">
+
+      <!-- P1: NEWS — coluna 1, span 2 linhas -->
+      <div class="panel" id="p-news">
+        <div class="ph">
+          <span class="pulse-dot"></span>
+          TOP — INSIDER FEED
+          <span class="phs">CARDINAL DATA PLATFORM</span>
+          <span style="margin-left:auto;font-size:7px;color:var(--g3)" id="news-count">—</span>
+        </div>
+        <div class="ps" id="news-list"></div>
+      </div>
+
+      <!-- P2: WEI — coluna 2, linha 1 -->
+      <div class="panel" id="p-wei">
+        <div class="ph">
+          WEI — WORLD FOOTBALL INDEX
+          <span class="phs">VPI / REGIÃO</span>
+        </div>
+        <div class="ps" id="wei-list"></div>
+      </div>
+
+      <!-- P3: MAESTRO — coluna 2, linha 2 -->
+      <div class="panel" id="p-mae">
+        <div class="ph">
+          MAESTRO — ANALYST CALL
+          <span class="phs">CARDINAL RESEARCH</span>
+        </div>
+        <div class="ps" id="mae-list"></div>
+      </div>
+
+      <!-- P4: FX — coluna 3, linha 1 -->
+      <div class="panel" id="p-fx">
+        <div class="ph">
+          FX — CÂMBIO AO VIVO
+          <span class="phs">SPOT RATE</span>
+          <span class="pulse-dot" style="margin-left:auto"></span>
+        </div>
+        <div class="ps" id="fx-list"></div>
+      </div>
+
+      <!-- P5: TIMES — coluna 3, linha 2 -->
+      <div class="panel" id="p-teams">
+        <div class="ph">
+          TIMES — VPI MONITOR
+          <span class="phs">CLIQUE PARA DOSSIÊ</span>
+        </div>
+        <div class="ps" id="teams-list"></div>
+      </div>
+
+      <!-- P6: STATS — coluna 4, span 2 linhas -->
+      <div class="panel" id="p-stats">
+        <div class="ph">SIT · KPIs</div>
+        <div class="ps" style="padding:0" id="stats-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="statusbar"></div>
+
+<script src="sit-db.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+const session = SIT.boot('MON');
+if (session) {
+  document.title = 'SIT · MON — Monitor Global';
+  SIT.setBreadcrumb([{label:'SIT v11'},{label:'MON · MONITOR GLOBAL'}]);
+
+  const db  = SIT_DB.DB;
+  const keys = Object.keys(db);
+
+  // ── NAV TIMES ──────────────────────────────────────────
+  document.getElementById('nav-teams').innerHTML = keys.map(k => {
+    const t   = db[k];
+    const col = t.chgN > 0 ? 'tup' : 'tdn';
+    const rc  = t.rating === 'BUY' ? 'g' : t.rating === 'SELL' ? 'r' : 'a';
+    return `<div class="nav-item" onclick="SIT.go('${k}')">
+      <span class="${rc}" style="font-size:7px">●</span>
+      <span style="flex:1">${t.tk}</span>
+      <span class="nav-item-val ${col}">${t.vpi}%</span>
+    </div>`;
+  }).join('');
+
+  // ── NEWS ───────────────────────────────────────────────
+  const TAG_COLORS = {
+    brk:'var(--r1)', ins:'var(--a1)', upd:'var(--g2)', rpt:'var(--c1)'
+  };
+  const TAG_LABELS = { brk:'BRK', ins:'INS', upd:'UPD', rpt:'RPT' };
+  const newsHTML = SIT_DB.NEWS.map(n => {
+    const col = TAG_COLORS[n.tag] || 'var(--t3)';
+    return `<div class="news-card">
+      <span class="news-tag" style="color:${col};border-color:${col}20;background:${col}10">${TAG_LABELS[n.tag]||n.tag.toUpperCase()}</span>
+      <span class="news-title">${n.txt}</span>
+      <span class="news-time">${n.time}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('news-list').innerHTML = newsHTML;
+  document.getElementById('news-count').textContent = SIT_DB.NEWS.length + ' items';
+
+  // ── WEI ────────────────────────────────────────────────
+  const WEI = [
+    {f:'🌍',n:'Global',    v:74.2,c:+0.8,cmd:'MON'},
+    {f:'🇧🇷',n:'Brasil',   v:78.1,c:+2.1,cmd:'BRA'},
+    {f:'🇪🇸',n:'Espanha',  v:82.3,c:+3.2,cmd:'ESP'},
+    {f:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',n:'Inglaterra',v:80.5,c:+1.4,cmd:'UK'},
+    {f:'🇩🇪',n:'Alemanha', v:76.2,c:+1.7,cmd:'GER'},
+    {f:'🇮🇹',n:'Itália',   v:72.8,c:-0.9,cmd:'ITA'},
+    {f:'🇫🇷',n:'França',   v:74.5,c:+0.3,cmd:'FRA'},
+    {f:'🇸🇦',n:'Arábia',   v:71.0,c:+1.6,cmd:'SAU'},
+  ];
+  document.getElementById('wei-list').innerHTML = WEI.map(w => {
+    const up  = w.c >= 0;
+    const col = up ? 'var(--g1)' : 'var(--r1)';
+    const spark = miniSparkline([w.v-3,w.v-1.5,w.v+0.5,w.v-0.8,w.v], up ? '#00ff41' : '#ff3333');
+    return `<div class="wei-row" onclick="SIT.go('${w.cmd}')">
+      <span class="wei-flag">${w.f}</span>
+      <span class="wei-name">${w.n}</span>
+      ${spark}
+      <div class="wei-bar-wrap">
+        <div class="wei-bar">
+          <div class="wei-fill" style="width:${w.v}%;background:${col}"></div>
+        </div>
+      </div>
+      <span class="wei-val" style="color:${col}">${w.v}%</span>
+      <span class="wei-chg" style="color:${col}">${up?'+':''}${w.c}%</span>
+    </div>`;
+  }).join('');
+
+  // ── MAESTRO ────────────────────────────────────────────
+  document.getElementById('mae-list').innerHTML = SIT_DB.MAESTRO.map(m => {
+    const rc  = m.r==='BUY'?'buy':m.r==='SELL'?'sell':'hold';
+    const col = m.r==='BUY'?'var(--g1)':m.r==='SELL'?'var(--r1)':'var(--a1)';
+    const team = m.tk.split('.')[0];
+    return `<div class="team-row" onclick="SIT.go('${team}')">
+      <span class="bg ${rc}" style="font-size:6.5px">${m.r}</span>
+      <span class="team-tk" style="width:64px;color:var(--t3)">${m.tk}</span>
+      <span class="team-name">${m.d.slice(0,28)}</span>
+      <span style="color:${col};font-family:var(--fm);font-size:8px;white-space:nowrap">${m.s}</span>
+    </div>`;
+  }).join('');
+
+  // ── FX ─────────────────────────────────────────────────
+  const FX = [
+    {p:'USD/BRL',v:'5.15',c:'+0.8%',up:true},
+    {p:'EUR/BRL',v:'5.63',c:'+0.5%',up:true},
+    {p:'GBP/BRL',v:'6.51',c:'+0.3%',up:true},
+    {p:'EUR/USD',v:'1.093',c:'-0.1%',up:false},
+    {p:'SAR/BRL',v:'1.373',c:'+0.2%',up:true},
+    {p:'JPY/BRL',v:'0.034',c:'-0.3%',up:false},
+  ];
+  document.getElementById('fx-list').innerHTML = FX.map(f => {
+    const col = f.up ? 'var(--g1)' : 'var(--r1)';
+    const spark = miniSparkline(
+      f.up ? [f.v*0.98,f.v*0.99,f.v*0.985,f.v*0.995,parseFloat(f.v)] :
+             [f.v*1.02,f.v*1.01,f.v*1.015,f.v*1.005,parseFloat(f.v)],
+      f.up ? '#00ff41' : '#ff3333'
+    );
+    return `<div class="fx-row">
+      <span class="fx-pair">${f.p}</span>
+      ${spark}
+      <span class="fx-val" style="color:${col}">${f.v}</span>
+      <span class="fx-chg" style="color:${col}">${f.c}</span>
+    </div>`;
+  }).join('');
+
+  // ── TIMES ──────────────────────────────────────────────
+  const sorted = keys.sort((a,b) => db[b].vpi - db[a].vpi);
+  document.getElementById('teams-list').innerHTML = sorted.map(k => {
+    const t   = db[k];
+    const col = t.chgN > 0 ? 'var(--g1)' : 'var(--r1)';
+    const rc  = t.rating === 'BUY' ? 'buy' : t.rating === 'SELL' ? 'sell' : 'hold';
+    const spark = miniSparkline(
+      t.chgN >= 0
+        ? [t.vpi-2, t.vpi-1, t.vpi-0.5, t.vpi+0.3, t.vpi]
+        : [t.vpi+2, t.vpi+1, t.vpi+0.5, t.vpi-0.3, t.vpi],
+      t.chgN >= 0 ? '#00ff41' : '#ff3333'
+    );
+    return `<div class="team-row" onclick="SIT.go('${k}')">
+      <span class="team-tk">${t.tk}</span>
+      ${spark}
+      <span class="team-name">${t.liga}</span>
+      <span class="team-vpi" style="color:${col}">${t.vpi}%</span>
+      <span class="team-chg" style="color:${col}">${t.chg}</span>
+    </div>`;
+  }).join('');
+
+  // ── KPIs LATERAIS ──────────────────────────────────────
+  const avgVPI  = (keys.reduce((s,k) => s+db[k].vpi, 0) / keys.length).toFixed(1);
+  const buys    = keys.filter(k => db[k].rating === 'BUY').length;
+  const sells   = keys.filter(k => db[k].rating === 'SELL').length;
+  const holds   = keys.length - buys - sells;
+  const kpis = [
+    {label:'VPI MÉDIO GLOBAL', val:avgVPI+'%', sub:'13 indicadores ativos', color:'var(--g1)', pct:avgVPI},
+    {label:'CLUBES MONITORADOS', val:keys.length, sub:'4 ligas · 8 países', color:'var(--c1)', pct:keys.length*8},
+    {label:'BUY CALLS', val:buys, sub:'Maestro · PROFESSIONAL+', color:'var(--g1)', pct:buys/keys.length*100},
+    {label:'HOLD CALLS', val:holds, sub:'Aguardar catalisador', color:'var(--a1)', pct:holds/keys.length*100},
+    {label:'SELL CALLS', val:sells, sub:'Reduzir exposição', color:'var(--r1)', pct:sells/keys.length*100},
+    {label:'ATLETAS RASTREADOS', val:keys.reduce((s,k)=>s+(db[k].athletes||[]).length,0), sub:'VPI individual ativo', color:'var(--c1)', pct:75},
+    {label:'COPA 2026', val:'48', sub:'Seleções · USA/MEX/CAN', color:'var(--a1)', pct:100},
+    {label:'FX MONITORADOS', val:'6', sub:'Pares em tempo real', color:'var(--g2)', pct:60},
+  ];
+  document.getElementById('stats-list').innerHTML = kpis.map(k =>
+    `<div class="stat-item">
+      <div class="stat-label">${k.label}</div>
+      <div class="stat-val" style="color:${k.color}">${k.val}</div>
+      <div class="stat-sub">${k.sub}</div>
+      <div class="stat-bar">
+        <div class="stat-bar-fill" style="width:${Math.min(k.pct,100)}%;background:${k.color}"></div>
+      </div>
+    </div>`
+  ).join('');
+
+  // ── SPARKLINE SVG inline ──────────────────────────────
+  function miniSparkline(data, color) {
+    const w=44, h=14, pad=1;
+    const mn = Math.min(...data), mx = Math.max(...data);
+    const range = mx - mn || 1;
+    const pts = data.map((v,i) => {
+      const x = pad + (i/(data.length-1))*(w-pad*2);
+      const y = h - pad - ((v-mn)/range)*(h-pad*2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    return `<svg class="sparkline" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.2" opacity=".7"/>
+      <circle cx="${pts.split(' ').pop().split(',')[0]}" cy="${pts.split(' ').pop().split(',')[1]}" r="1.5" fill="${color}"/>
+    </svg>`;
+  }
+}
+</script>
+</body>
+</html>

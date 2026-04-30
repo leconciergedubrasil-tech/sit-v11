@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><title>SIT · COPA 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+</head>
+<body class="sit-layout">
+<div id="header"></div>
+<div class="sit-body">
+  <div class="nav-lateral">
+    <div class="nav-section">
+      <div class="nav-sec-hd">Funções</div>
+      <div class="nav-item" onclick="SIT.go('MON')"><span>◉</span><span>MONITOR</span></div>
+      <div class="nav-item active" onclick="SIT.go('COPA')"><span>🏆</span><span>COPA 2026</span></div>
+      <div class="nav-item" onclick="SIT.go('H2H')"><span>⇄</span><span>HEAD-TO-HEAD</span></div>
+      <div class="nav-item" onclick="SIT.go('MRKT')"><span>↔</span><span>MERCADO</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-hd">Grupos</div>
+      <div id="nav-groups"></div>
+    </div>
+  </div>
+  <div class="sit-content">
+    <div style="background:var(--bg0);padding:8px 14px;border-bottom:1px solid var(--b3);display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <span style="font-size:18px;font-weight:700;color:var(--a1);font-family:var(--fu);letter-spacing:1px">COPA 2026</span>
+      <span style="font-size:10px;color:var(--t2);font-family:var(--fu)">FIFA WORLD CUP · USA / MEX / CAN</span>
+      <span class="bg buy" style="margin-left:auto">48 SELEÇÕES</span>
+      <button onclick="window.history.back()" style="padding:3px 8px;font-size:8px;border:1px solid var(--b2);background:transparent;color:var(--g2);cursor:pointer;font-family:var(--fu)">← BACK</button>
+    </div>
+    <div class="tabs-row" id="tabs">
+      <button class="tab-btn on" onclick="showTab('groups',this)">GRUPOS</button>
+      <button class="tab-btn" onclick="showTab('odds',this)">ODDS</button>
+      <button class="tab-btn" onclick="showTab('seleções',this)">SELEÇÕES</button>
+      <button class="tab-btn" onclick="showTab('vpi',this)">VPI RANKING</button>
+      <button class="tab-btn" onclick="showTab('calendar',this)">CALENDÁRIO</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:8px 12px" id="tab-content"></div>
+  </div>
+</div>
+<div id="statusbar"></div>
+<script src="sit-db.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+const session = SIT.boot('COPA');
+if (session) {
+  SIT.setBreadcrumb([{label:'MON',href:'MON'},{label:'COPA 2026'}]);
+  document.title = 'SIT · COPA 2026 — FIFA World Cup';
+  const nations = SIT_DB.COPA_NATIONS || [];
+
+  // Nav grupos
+  const grupos = [...new Set(nations.map(n=>n.grupo))].sort();
+  document.getElementById('nav-groups').innerHTML = grupos.map(g=>
+    '<div class="nav-item" onclick="filterGroup(\''+g+'\')"><span class="dim">G'+g.replace('Grupo ','')+'</span><span>Grupo '+g.replace('Grupo ','')+'</span></div>'
+  ).join('');
+
+  showTab('groups');
+
+  function showTab(tab, btn) {
+    document.querySelectorAll('#tabs .tab-btn').forEach(b=>b.classList.remove('on'));
+    if (btn) btn.classList.add('on');
+    const el = document.getElementById('tab-content');
+    if (tab==='groups')   el.innerHTML = renderGroups();
+    if (tab==='odds')     el.innerHTML = renderOdds();
+    if (tab==='seleções') el.innerHTML = renderSelecoes();
+    if (tab==='vpi')      el.innerHTML = renderVPIRanking();
+    if (tab==='calendar') el.innerHTML = renderCalendar();
+  }
+  window.showTab = showTab;
+
+  function filterGroup(g) {
+    showTab('groups');
+    document.querySelectorAll('.group-block').forEach(el=>{
+      el.style.display = el.dataset.grupo===g?'block':'none';
+    });
+  }
+  window.filterGroup = filterGroup;
+
+  function renderGroups() {
+    return grupos.map(g=>{
+      const ns = nations.filter(n=>n.grupo===g).sort((a,b)=>b.vpi-a.vpi);
+      return '<div class="group-block" data-grupo="'+g+'" style="margin-bottom:10px">'+
+        '<div class="sec">'+g.toUpperCase()+'</div>'+
+        '<table class="dt"><thead><tr><th>SELEÇÃO</th><th>VPI</th><th>RANKING FIFA</th><th>ODDS CAMPEÃ</th><th>FAVORITA</th></tr></thead><tbody>'+
+        ns.map((n,i)=>'<tr>'+
+          '<td><span style="margin-right:6px">'+n.flag+'</span>'+n.name+'</td>'+
+          '<td class="'+(n.vpi>=80?'g':n.vpi>=65?'a':'r')+'">'+n.vpi+'%</td>'+
+          '<td class="dim">'+n.fifa+'</td>'+
+          '<td class="a">'+n.odds+'</td>'+
+          '<td>'+(i===0?'<span class="bg buy">TOP</span>':'<span class="dim">—</span>')+'</td></tr>'
+        ).join('')+'</tbody></table></div>';
+    }).join('');
+  }
+
+  function renderOdds() {
+    const sorted = [...nations].sort((a,b)=>parseFloat(a.odds)-parseFloat(b.odds)).slice(0,16);
+    return '<div class="sec">ODDS PARA CAMPEÃ — TOP 16</div>'+
+      '<table class="dt"><thead><tr><th>#</th><th>SELEÇÃO</th><th>ODDS</th><th>VPI</th><th>GRUPO</th></tr></thead><tbody>'+
+      sorted.map((n,i)=>'<tr>'+
+        '<td class="dim">'+(i+1)+'</td>'+
+        '<td><span style="margin-right:6px">'+n.flag+'</span>'+n.name+'</td>'+
+        '<td class="'+(i<3?'g':i<8?'a':'dim')+'" style="font-weight:700">'+n.odds+'</td>'+
+        '<td class="'+(n.vpi>=80?'g':n.vpi>=65?'a':'r')+'">'+n.vpi+'%</td>'+
+        '<td class="dim">'+n.grupo+'</td></tr>'
+      ).join('')+'</tbody></table>';
+  }
+
+  function renderSelecoes() {
+    return '<div class="sec">TODAS AS SELEÇÕES — 48 NAÇÕES</div>'+
+      '<table class="dt"><thead><tr><th>SELEÇÃO</th><th>CONFEDERAÇÃO</th><th>VPI</th><th>FIFA</th><th>GRUPO</th></tr></thead><tbody>'+
+      nations.sort((a,b)=>b.vpi-a.vpi).map((n,i)=>'<tr>'+
+        '<td><span style="margin-right:6px">'+n.flag+'</span>'+n.name+'</td>'+
+        '<td class="dim">'+n.conf+'</td>'+
+        '<td class="'+(n.vpi>=80?'g':n.vpi>=65?'a':'r')+'">'+n.vpi+'%</td>'+
+        '<td class="dim">'+n.fifa+'</td>'+
+        '<td class="dim">'+n.grupo+'</td></tr>'
+      ).join('')+'</tbody></table>';
+  }
+
+  function renderVPIRanking() {
+    const sorted = [...nations].sort((a,b)=>b.vpi-a.vpi);
+    return '<div class="sec">VPI RANKING — 48 SELEÇÕES</div>'+
+      sorted.map((n,i)=>{
+        const bar = '<div style="flex:1;height:5px;background:var(--bg0);border-radius:3px"><div style="width:'+n.vpi+'%;height:100%;background:'+(n.vpi>=80?'var(--g1)':n.vpi>=65?'var(--a1)':'var(--r1)')+';border-radius:3px"></div></div>';
+        return '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid var(--b1)">'+
+          '<span class="dim" style="font-size:8px;width:18px;text-align:right">'+(i+1)+'</span>'+
+          '<span style="font-size:13px;width:22px;text-align:center">'+n.flag+'</span>'+
+          '<span style="width:130px;font-size:9px;font-family:var(--fu)">'+n.name+'</span>'+
+          bar+
+          '<span class="'+(n.vpi>=80?'g':n.vpi>=65?'a':'r')+'" style="font-size:10px;font-weight:700;width:36px;text-align:right">'+n.vpi+'%</span>'+
+          '</div>';
+      }).join('');
+  }
+
+  function renderCalendar() {
+    return '<div class="sec">CALENDÁRIO COPA 2026</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">'+
+      [
+        {d:'11 Jun 2026',fase:'FASE DE GRUPOS',local:'Los Angeles'},
+        {d:'22 Jun 2026',fase:'FASE DE GRUPOS',local:'New York'},
+        {d:'29 Jun 2026',fase:'OITAVAS',local:'Dallas'},
+        {d:'4 Jul 2026',fase:'QUARTAS',local:'Miami'},
+        {d:'11 Jul 2026',fase:'SEMIFINAL',local:'Los Angeles'},
+        {d:'19 Jul 2026',fase:'FINAL',local:'MetLife Stadium · NY'},
+      ].map(e=>'<div class="card-dark">'+
+        '<div class="dim" style="font-size:7px">'+e.d+'</div>'+
+        '<div style="font-size:10px;color:var(--t1);font-weight:600;margin:4px 0">'+e.fase+'</div>'+
+        '<div class="dim" style="font-size:8px">📍 '+e.local+'</div>'+
+        '</div>'
+      ).join('')+'</div>';
+  }
+}
+</script>
+</body>
+</html>
