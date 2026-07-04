@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff41">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon.svg">
+<meta charset="UTF-8"><title>SIT · TECH</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+</head>
+<body class="sit-layout">
+<div id="header"></div>
+<div class="sit-body">
+  <div class="nav-lateral">
+    <div class="nav-section">
+      <div class="nav-sec-hd">Funções</div>
+      <div class="nav-item" onclick="SIT.go('MON')"><span class="t3">◉</span><span>MONITOR</span></div>
+      <div class="nav-item active"><span class="g">■</span><span>TECH</span></div>
+      <div class="nav-item" onclick="SIT.go('COPA')"><span style="font-size:9px">🏆</span><span>COPA 2026</span></div>
+      <div class="nav-item" onclick="SIT.go('HELP')"><span class="t3">?</span><span>HELP</span></div>
+    </div>
+    <div class="nav-section"><div class="nav-sec-hd">Times</div><div id="nav-teams"></div></div>
+  </div>
+  <div class="sit-content">
+    <div style="background:var(--bg0);padding:6px 12px;border-bottom:1px solid var(--b3);display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span style="font-size:18px;font-weight:700;color:var(--a1);font-family:var(--fu)">TECH</span>
+      <button onclick="window.history.back()" style="margin-left:auto;padding:2px 8px;font-size:7.5px;border:1px solid var(--b2);background:transparent;color:var(--g2);cursor:pointer;font-family:var(--fu)">← BACK</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px" id="main-content"></div>
+  </div>
+</div>
+<div id="statusbar"></div>
+<script src="sit-db.js"></script>
+<script src="sit-indicators.js"></script>
+<script src="sit-auth.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+const session = SIT.boot('TECH');
+if (session) {
+  AUTH.boot();
+  SIT.setBreadcrumb([{label:'MON',href:'MON'},{label:'TECH'}]);
+  const db = SIT_DB.DB;
+  document.getElementById('nav-teams').innerHTML = Object.entries(db).map(([k,t]) =>
+    '<div class="nav-item" onclick="SIT.go(\''+k+'\')">'+
+    '<span class="'+(t.rating==='BUY'?'g':t.rating==='SELL'?'r':'a')+'" style="font-size:7px">●</span>'+
+    '<span style="flex:1">'+t.tk+'</span>'+
+    '<span class="nav-item-val '+(t.chgN>0?'tup':'tdn')+'">'+t.vpi+'%</span></div>'
+  ).join('');
+  document.getElementById('main-content').innerHTML = render();
+}
+function render() {
+  const db = SIT_DB.DB;
+  const teams = Object.entries(db);
+  const params = new URLSearchParams(window.location.search);
+  const teamKey = (params.get('team') || 'FLA').toUpperCase();
+  const t = db[teamKey];
+  if (!t) return '<div class="dim">Time não encontrado.</div>';
+  const ind = IND.calcAll(t);
+  const hp = t.hp || [];
+  const serie = hp.map(h=>h.vp).reverse(); serie.push(t.vpi);
+  const rsiLbl = IND.RSI.label(ind.rsi);
+  
+  // Sparkline grande
+  const w=600,h=80,pad=6;
+  const mn=Math.min(...serie),mx=Math.max(...serie),rng=mx-mn||1;
+  const pts = serie.map((v,i)=>{
+    const x=pad+(i/(serie.length-1||1))*(w-pad*2);
+    const y=h-pad-(v-mn)/rng*(h-pad*2);
+    return x.toFixed(1)+','+y.toFixed(1);
+  }).join(' ');
+  
+  return '<div class="sec">TECH — ANÁLISE TÉCNICA · '+t.tk+'</div>'+
+    '<svg width="100%" viewBox="0 0 '+w+' '+h+'" style="display:block;margin:6px 0;border:1px solid var(--b1)">'+
+    '<polyline points="'+pts+'" fill="none" stroke="var(--g1)" stroke-width="1.5"/>'+
+    '</svg>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0">'+
+    [
+      {l:'RSI(14)',v:ind.rsi,c:rsiLbl.col,s:rsiLbl.txt},
+      {l:'VPI',v:ind.vpi+'%',c:ind.vpi>=75?'var(--g1)':'var(--a1)',s:'calculado'},
+      {l:'TDM',v:ind.tdm,c:IND.TDM.color(ind.tdm),s:'domínio'},
+      {l:'SIT-QUANT',v:ind.quant.score.toFixed(1),c:'var(--g1)',s:ind.quant.rating},
+    ].map(it=>'<div class="card-dark"><div class="dim" style="font-size:6.5px">'+it.l+'</div>'+
+      '<div style="font-size:18px;font-weight:700;font-family:var(--fu);color:'+it.c+'">'+it.v+'</div>'+
+      '<div class="dim" style="font-size:7px">'+it.s+'</div></div>'
+    ).join('')+'</div>'+
+    '<div class="sec">HISTÓRICO VPI</div>'+
+    '<table class="dt"><thead><tr><th>DATA</th><th>ADVERSÁRIO</th><th>PLACAR</th><th>VPI</th><th>RSI PARCIAL</th></tr></thead><tbody>'+
+    hp.map((h,i,arr)=>{
+      const sp=arr.slice(i).map(x=>x.vp).reverse(); sp.push(h.vp);
+      const rp=IND.RSI.calc(sp); const lp=IND.RSI.label(rp);
+      return '<tr><td class="dim">'+h.d+'</td><td>'+h.adv+'</td>'+
+        '<td class="a" style="font-weight:700">'+h.pl+'</td>'+
+        '<td class="'+(h.vp>=80?'g':h.vp>=65?'a':'r')+'">'+h.vp+'%</td>'+
+        '<td style="color:'+lp.col+'">'+rp+'</td></tr>';
+    }).join('')+'</tbody></table>';
+}
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("[PWA] SW registrado")).catch(e=>console.warn("[PWA]",e));}</script>
+</body>
+</html>
