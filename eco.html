@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff41">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon.svg">
+<meta charset="UTF-8"><title>SIT · ECO</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+<style>
+.eco-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1);flex:1;overflow:hidden}
+.eco-panel{background:var(--bg1);display:flex;flex-direction:column;overflow:hidden}
+.macro-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--b0);font-size:9px}
+.macro-lbl{width:130px;font-family:var(--fu);font-size:8px;color:var(--t3);flex-shrink:0}
+.macro-val{font-family:var(--fm);font-weight:700;min-width:54px}
+.macro-chg{width:48px;text-align:right;font-family:var(--fm);font-size:8px}
+.macro-imp{font-size:7px;font-family:var(--fu);font-weight:700;padding:1px 4px;border:1px solid;flex-shrink:0}
+.macro-note{flex:1;font-size:7.5px;color:var(--t4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imp-a{color:var(--r1);border-color:var(--r2)}
+.imp-m{color:var(--a1);border-color:var(--a3)}
+.imp-b{color:var(--t4);border-color:var(--b2)}
+.forecast-row{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--b0);font-size:9px}
+.cal-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--b0);font-size:9px}
+.commod-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--b0);font-size:9px}
+</style>
+</head>
+<body class="sit-layout">
+<div id="header"></div>
+<div class="sit-body">
+  <div class="nav-lateral">
+    <div class="nav-section">
+      <div class="nav-sec-hd">Funções</div>
+      <div class="nav-item" onclick="SIT.go('MON')"><span class="t3">◉</span><span>MONITOR</span></div>
+      <div class="nav-item active"><span class="t3">≡</span><span>ECO · MACRO</span></div>
+      <div class="nav-item" onclick="SIT.go('FX')"><span class="t3">$</span><span>FX · CÂMBIO</span></div>
+      <div class="nav-item" onclick="SIT.go('MRKT')"><span class="t3">↔</span><span>MERCADO</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-hd">Indicadores</div>
+      <div id="nav-macro"></div>
+    </div>
+  </div>
+
+  <div class="sit-content">
+    <div style="background:var(--bg0);padding:6px 12px;border-bottom:1px solid var(--b3);display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span style="font-size:18px;font-weight:700;color:var(--a1);font-family:var(--fu)">ECO</span>
+      <span style="font-size:9px;color:var(--t3);font-family:var(--fu)">MACROECONOMIA · IMPACTO NO FUTEBOL BRASILEIRO</span>
+      <span class="pulse-dot" style="margin-left:auto"></span>
+      <button onclick="window.history.back()" style="padding:2px 8px;font-size:7.5px;border:1px solid var(--b2);background:transparent;color:var(--g2);cursor:pointer;font-family:var(--fu)">← BACK</button>
+    </div>
+
+    <div class="eco-grid">
+      <!-- P1: Macro indicadores -->
+      <div class="eco-panel">
+        <div class="ph">MACRO — BRASIL <span class="phs">DADOS BCB/IBGE</span><span class="pulse-dot" style="margin-left:auto"></span></div>
+        <div class="ps" id="macro-list"></div>
+      </div>
+
+      <!-- P2: Forecast -->
+      <div class="eco-panel">
+        <div class="ph">FORECAST 2026 <span class="phs">CONSENSO ANALISTAS</span></div>
+        <div class="ps" id="forecast-list"></div>
+      </div>
+
+      <!-- P3: Calendário econômico -->
+      <div class="eco-panel">
+        <div class="ph">CALENDÁRIO ECONÔMICO <span class="phs">PRÓXIMOS EVENTOS</span></div>
+        <div class="ps" id="calendar-list"></div>
+      </div>
+
+      <!-- P4: Commodities do futebol -->
+      <div class="eco-panel">
+        <div class="ph">COMMODITIES DO FUTEBOL <span class="phs">DIREITOS E VALORES</span></div>
+        <div class="ps" id="commod-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="statusbar"></div>
+<script src="sit-db.js"></script>
+<script src="sit-indicators.js"></script>
+<script src="sit-auth.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+const session = SIT.boot('ECO');
+if (session) {
+  AUTH.boot();
+  SIT.setBreadcrumb([{label:'MON',href:'MON'},{label:'ECO · MACRO'}]);
+  const eco = SIT_DB.ECO_DATA;
+
+  // Nav macro highlights
+  document.getElementById('nav-macro').innerHTML =
+    (eco.macro||[]).slice(0,5).map(m => {
+      const col = m.chgN > 0 ? 'tup' : 'tdn';
+      return `<div class="nav-item">
+        <span class="dim" style="font-size:7px;width:70px">${m.lbl}</span>
+        <span class="${col}" style="font-size:9px;font-weight:700;font-family:var(--fm)">${m.val}</span>
+      </div>`;
+    }).join('');
+
+  // Macro
+  document.getElementById('macro-list').innerHTML =
+    (eco.macro||[]).map(m => {
+      const col  = m.chgN > 0 ? 'var(--g1)' : 'var(--r1)';
+      const impC = m.impact==='Alto' ? 'imp-a' : m.impact==='Médio' ? 'imp-m' : 'imp-b';
+      return `<div class="macro-row">
+        <span class="macro-lbl">${m.lbl}</span>
+        <span class="macro-val" style="color:${col}">${m.val}</span>
+        <span class="macro-chg" style="color:${col}">${m.chg}</span>
+        <span class="macro-imp ${impC}">${m.impact}</span>
+        <span class="macro-note">${m.note}</span>
+      </div>`;
+    }).join('');
+
+  // Forecast
+  document.getElementById('forecast-list').innerHTML =
+    '<div class="sec" style="margin-bottom:4px">PROJEÇÕES PARA FIM DE 2026</div>' +
+    (eco.forecast||[]).map(f =>
+      `<div class="forecast-row">
+        <span style="flex:1;font-family:var(--fu);font-size:8px;color:var(--t2)">${f.ind}</span>
+        <span style="color:var(--t4);font-size:7.5px;margin-right:4px">min ${f.min}</span>
+        <span class="g" style="font-weight:700;min-width:42px;text-align:center">${f.cons}</span>
+        <span style="color:var(--t4);font-size:7.5px;margin-left:4px">max ${f.max}</span>
+        <span style="margin-left:8px;font-size:10px">${f.trend}</span>
+      </div>`
+    ).join('') +
+    '<div class="sec" style="margin-top:10px;margin-bottom:4px">IMPACTO NO FUTEBOL BRASILEIRO</div>' +
+    `<div style="font-size:8.5px;color:var(--t2);line-height:1.8;padding:4px 0">
+      <b class="a">Câmbio:</b> USD/BRL alto valoriza atletas exportáveis. Clubes com receita em BRL e cláusulas em EUR têm vantagem de arbitragem.<br>
+      <b class="a">Juros:</b> SELIC elevada encarece financiamento de estádios e SAFs. Projetos de longo prazo postergados.<br>
+      <b class="a">Copa 2026:</b> Impacto estimado de R$12B na economia brasileira. Turismo e direitos de imagem.<br>
+      <b class="g">Oportunidade:</b> Cotação favorável para contratações de atletas sul-americanos.
+    </div>`;
+
+  // Calendário
+  document.getElementById('calendar-list').innerHTML =
+    (eco.calendar||[]).map(e => {
+      const impC = e.impact==='alto' ? 'r' : e.impact==='médio' ? 'a' : 'dim';
+      return `<div class="cal-row">
+        <span class="a" style="font-family:var(--fm);font-weight:700;min-width:52px;font-size:8px">${e.date}</span>
+        <span style="flex:1;color:var(--t1);font-size:9px">${e.event}</span>
+        <span class="dim" style="font-size:8px;min-width:36px">ant: ${e.prev}</span>
+        <span class="${impC}" style="font-size:8px;min-width:36px">cons: ${e.cons}</span>
+        <span class="${impC}" style="font-size:7px;font-family:var(--fu);font-weight:700">${e.impact.toUpperCase()}</span>
+      </div>`;
+    }).join('');
+
+  // Commodities do futebol
+  document.getElementById('commod-list').innerHTML =
+    (eco.commod||[]).map(c => {
+      const col = c.chgN > 0 ? 'var(--g1)' : 'var(--r1)';
+      return `<div class="commod-row">
+        <span style="flex:1;font-family:var(--fu);font-size:8.5px;color:var(--t2)">${c.nm}</span>
+        <span style="font-weight:700;font-family:var(--fm);color:${col};min-width:54px;text-align:right">${c.val}</span>
+        <span style="font-size:8px;color:${col};min-width:36px;text-align:right">${c.chg}</span>
+      </div>
+      <div style="font-size:7.5px;color:var(--t5);padding:0 0 4px;border-bottom:1px solid var(--b0)">${c.note}</div>`;
+    }).join('');
+}
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("[PWA] SW registrado")).catch(e=>console.warn("[PWA]",e));}</script>
+</body>
+</html>

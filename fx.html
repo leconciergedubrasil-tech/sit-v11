@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff41">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon.svg">
+<meta charset="UTF-8"><title>SIT · FX</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+<style>
+.fx-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1);flex:1;overflow:hidden}
+.fx-panel{background:var(--bg1);display:flex;flex-direction:column;overflow:hidden}
+.fx-card{
+  padding:8px 10px;border-bottom:1px solid var(--b1);cursor:pointer;
+  transition:background .1s;
+}
+.fx-card:hover{background:var(--bg2)}
+.fx-card-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.fx-pair-big{font-size:14px;font-weight:700;font-family:var(--fu);letter-spacing:1px;color:var(--a1)}
+.fx-flag{font-size:16px}
+.fx-rate-big{font-size:22px;font-weight:700;font-family:var(--fu);line-height:1}
+.fx-chg-big{font-size:10px;font-family:var(--fm)}
+.fx-bar-row{display:flex;align-items:center;gap:6px;margin-top:4px}
+.fx-range{font-size:7.5px;color:var(--t4);font-family:var(--fu)}
+.fx-bar-wrap{flex:1;height:3px;background:var(--bg0);border-radius:2px;position:relative}
+.fx-bar-pos{height:100%;border-radius:2px}
+.fx-indicator{position:absolute;top:-2px;width:7px;height:7px;border-radius:50%;transform:translateX(-50%)}
+.netting-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--b0);font-size:9px}
+.netting-clube{width:52px;font-family:var(--fu);font-weight:700;color:var(--a1)}
+.netting-rec{flex:1;color:var(--t3);font-size:8px}
+.netting-val{font-family:var(--fm);font-weight:700;width:56px;text-align:right}
+.netting-adv{font-size:7.5px;font-family:var(--fu);font-weight:700;padding:1px 4px;border:1px solid}
+.adv-pos{color:var(--g1);border-color:var(--g3)}
+.adv-neg{color:var(--r1);border-color:var(--r2)}
+.adv-neu{color:var(--t4);border-color:var(--b2)}
+</style>
+</head>
+<body class="sit-layout">
+<div id="header"></div>
+<div class="sit-body">
+  <div class="nav-lateral">
+    <div class="nav-section">
+      <div class="nav-sec-hd">Funções</div>
+      <div class="nav-item" onclick="SIT.go('MON')"><span class="t3">◉</span><span>MONITOR</span></div>
+      <div class="nav-item active"><span class="t3">$</span><span>FX · CÂMBIO</span></div>
+      <div class="nav-item" onclick="SIT.go('ECO')"><span class="t3">≡</span><span>ECO · MACRO</span></div>
+      <div class="nav-item" onclick="SIT.go('MRKT')"><span class="t3">↔</span><span>MERCADO</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-hd">Pares Ativos</div>
+      <div id="nav-fx"></div>
+    </div>
+  </div>
+
+  <div class="sit-content">
+    <div style="background:var(--bg0);padding:6px 12px;border-bottom:1px solid var(--b3);display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span style="font-size:18px;font-weight:700;color:var(--a1);font-family:var(--fu)">FX</span>
+      <span style="font-size:9px;color:var(--t3);font-family:var(--fu)">CÂMBIO AO VIVO · IMPACTO NO FUTEBOL</span>
+      <div id="fx-source" style="margin-left:auto;font-size:7px;color:var(--t5);font-family:var(--fu)">mock data</div>
+      <span class="pulse-dot"></span>
+      <button onclick="window.history.back()" style="padding:2px 8px;font-size:7.5px;border:1px solid var(--b2);background:transparent;color:var(--g2);cursor:pointer;font-family:var(--fu)">← BACK</button>
+    </div>
+
+    <div class="fx-grid">
+      <!-- Pares principais -->
+      <div class="fx-panel">
+        <div class="ph">PARES PRINCIPAIS <span class="phs">SPOT RATE</span></div>
+        <div class="ps" id="fx-pairs"></div>
+      </div>
+
+      <!-- Netting advantage -->
+      <div class="fx-panel">
+        <div class="ph">NETTING ADVANTAGE <span class="phs">IMPACTO POR CLUBE</span></div>
+        <div class="ps">
+          <div style="font-size:8.5px;color:var(--t3);line-height:1.7;padding:6px 0;border-bottom:1px solid var(--b1);margin-bottom:6px">
+            Vantagem cambial = diferença entre receitas em BRL e obrigações em moeda estrangeira (salários EUR/USD).
+            Positivo = clube se beneficia do câmbio atual.
+          </div>
+          <div id="netting-list"></div>
+        </div>
+      </div>
+
+      <!-- Impacto Copa 2026 -->
+      <div class="fx-panel">
+        <div class="ph">COPA 2026 · IMPACTO FX <span class="phs">PROJEÇÃO CARDINAL</span></div>
+        <div class="ps" id="copa-fx"></div>
+      </div>
+
+      <!-- Histórico simulado -->
+      <div class="fx-panel">
+        <div class="ph">USD/BRL — HISTÓRICO 30D <span class="phs">SIMULADO</span></div>
+        <div class="ps" id="fx-history"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="statusbar"></div>
+<script src="sit-db.js"></script>
+<script src="sit-indicators.js"></script>
+<script src="sit-auth.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+const session = SIT.boot('FX');
+if (session) {
+  AUTH.boot();
+  SIT.setBreadcrumb([{label:'MON',href:'MON'},{label:'FX · CÂMBIO'}]);
+
+  // Tentar carregar FX real do LOADER
+  window.LOADER_READY?.then(() => {
+    if (window.LOADER?.source !== 'mock') {
+      const fx = window.LOADER.getFX();
+      if (fx?.updated_at) {
+        document.getElementById('fx-source').textContent =
+          '● REAL · ' + new Date(fx.updated_at).toLocaleTimeString('pt-BR');
+        document.getElementById('fx-source').style.color = 'var(--g3)';
+      }
+      renderFX(fx);
+    }
+  });
+
+  const fxBase = SIT_DB.FX_BASE;
+  const db     = SIT_DB.DB;
+
+  // Nav FX
+  document.getElementById('nav-fx').innerHTML = Object.entries(fxBase).map(([pair, d]) => {
+    const up  = d.rate >= d.prev;
+    const col = up ? 'tup' : 'tdn';
+    return `<div class="nav-item">
+      <span class="dim" style="font-size:7px;width:58px">${pair}</span>
+      <span class="${col}" style="font-family:var(--fm);font-size:9px;font-weight:700">${d.rate}</span>
+    </div>`;
+  }).join('');
+
+  function renderFX(realFX) {
+    // Mesclar real sobre base
+    const pairs = Object.entries(fxBase).map(([pair, d]) => {
+      let rate = d.rate;
+      if (realFX) {
+        const key = pair.replace('/','');
+        if (realFX[key]) rate = realFX[key];
+      }
+      const pct = (rate - d.lo) / (d.hi - d.lo) * 100;
+      const up  = rate >= d.prev;
+      const chg = ((rate - d.prev) / d.prev * 100).toFixed(2);
+      const col = up ? 'var(--g1)' : 'var(--r1)';
+      return {pair, rate, pct, up, chg, col, d};
+    });
+
+    // Cards de pares
+    document.getElementById('fx-pairs').innerHTML = pairs.map(p =>
+      `<div class="fx-card">
+        <div class="fx-card-top">
+          <span class="fx-flag">${p.d.flag}</span>
+          <div style="flex:1">
+            <div class="fx-pair-big">${p.pair}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="fx-rate-big" style="color:${p.col}">${p.rate}</div>
+            <div class="fx-chg-big" style="color:${p.col}">${p.up?'+':''}${p.chg}%</div>
+          </div>
+        </div>
+        <div class="fx-bar-row">
+          <span class="fx-range">${p.d.lo}</span>
+          <div class="fx-bar-wrap">
+            <div class="fx-bar-pos" style="width:${p.pct}%;background:${p.col}"></div>
+            <div class="fx-indicator" style="left:${p.pct}%;background:${p.col}"></div>
+          </div>
+          <span class="fx-range">${p.d.hi}</span>
+          <span style="font-size:7px;color:var(--t5);font-family:var(--fu)">30d</span>
+        </div>
+      </div>`
+    ).join('');
+  }
+  renderFX(null);
+
+  // Netting advantage por clube
+  const netting = [
+    {tk:'FLA',rec:'Receita BRL · Atletas em EUR (Arrascaeta, Rossi)',adv:'+18%',val:'R$+82M/a',pos:true},
+    {tk:'RM', rec:'Receita EUR · Contratos em EUR',adv:'NEUTRO',val:'EUR 0',pos:null},
+    {tk:'FCB',rec:'Receita EUR · Dívida USD (títulos)',adv:'-4%',val:'EUR-45M/a',pos:false},
+    {tk:'MCI',rec:'Receita GBP · Contratos em EUR',adv:'+6%',val:'GBP+28M/a',pos:true},
+    {tk:'PSG',rec:'Receita EUR · Salários USD (Ronaldo efeito)',adv:'+2%',val:'EUR+12M/a',pos:true},
+    {tk:'BAY',rec:'Receita EUR · Contratos EUR/DEM',adv:'NEUTRO',val:'EUR 0',pos:null},
+    {tk:'ACM',rec:'Receita EUR · Contratos EUR',adv:'+3%',val:'EUR+15M/a',pos:true},
+    {tk:'ALS',rec:'Receita SAR/USD · Salários EUR',adv:'-12%',val:'USD-180M/a',pos:false},
+  ];
+  document.getElementById('netting-list').innerHTML = netting.map(n => {
+    const cls = n.pos===true?'adv-pos':n.pos===false?'adv-neg':'adv-neu';
+    const col = n.pos===true?'var(--g1)':n.pos===false?'var(--r1)':'var(--t4)';
+    return `<div class="netting-row">
+      <span class="netting-clube">${n.tk}</span>
+      <span class="netting-rec">${n.rec}</span>
+      <span class="netting-val" style="color:${col}">${n.val}</span>
+      <span class="netting-adv ${cls}">${n.adv}</span>
+    </div>`;
+  }).join('');
+
+  // Copa 2026 FX impact
+  document.getElementById('copa-fx').innerHTML = `
+    <div class="sec" style="margin-bottom:6px">PROJEÇÃO USD/BRL DURANTE COPA</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+      <div class="card-dark"><div class="dim" style="font-size:7px">USD/BRL PROJETADO</div><div class="big a">5.30</div><div class="dim" style="font-size:7.5px">Jul 2026 consensus</div></div>
+      <div class="card-dark"><div class="dim" style="font-size:7px">IMPACTO TOTAL</div><div class="big g">+R$12B</div><div class="dim" style="font-size:7.5px">PIB turismo+direitos</div></div>
+      <div class="card-dark"><div class="dim" style="font-size:7px">PRÊMIO FIFA (BRA)</div><div class="big g">USD 23M</div><div class="dim" style="font-size:7.5px">Se campeão</div></div>
+      <div class="card-dark"><div class="dim" style="font-size:7px">PATROCÍNIOS TOP</div><div class="big" style="font-size:16px">USD 48B</div><div class="dim" style="font-size:7.5px">Total direitos WC26</div></div>
+    </div>
+    <div class="sec" style="margin-bottom:4px">ANÁLISE CARDINAL</div>
+    <div style="font-size:8.5px;color:var(--t2);line-height:1.8">
+      <b class="g">Oportunidade:</b> Câmbio projetado em 5.30 aumenta valor em BRL de prêmios internacionais.<br>
+      <b class="a">Atenção:</b> Atletas com cláusulas em EUR ficam mais caros para recompra.<br>
+      <b class="r">Risco:</b> Volatilidade cambial pré-Copa pode impactar planejamento salarial de clubes BRA.
+    </div>`;
+
+  // Histórico simulado USD/BRL
+  const hist30 = Array.from({length:30}, (_,i) => {
+    const base = 5.15;
+    const noise = (Math.sin(i*0.4)*0.12 + Math.cos(i*0.2)*0.08);
+    return {d:`${String(30-i).padStart(2,'0')}/04`, v:Math.round((base+noise)*1000)/1000};
+  }).reverse();
+
+  const mn = Math.min(...hist30.map(h=>h.v));
+  const mx = Math.max(...hist30.map(h=>h.v));
+  const rng = mx - mn || 0.1;
+  const w=300, h=60, pad=4;
+  const pts = hist30.map((h,i) => {
+    const x = pad + (i/(hist30.length-1))*(w-pad*2);
+    const y = h_pad = h-pad - (h.v-mn)/rng*(h-pad*2);
+    return `${x.toFixed(1)},${(h_pad).toFixed(1)}`;
+  }).join(' ');
+
+  // Gráfico simples com table
+  document.getElementById('fx-history').innerHTML =
+    `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <span class="dim" style="font-size:7.5px">Mín: <span class="r">${mn}</span></span>
+      <span class="dim" style="font-size:7.5px">Atual: <span class="g">5.15</span></span>
+      <span class="dim" style="font-size:7.5px">Máx: <span class="r">${mx}</span></span>
+    </div>` +
+    `<svg width="100%" viewBox="0 0 ${w} ${h}" style="display:block;margin-bottom:8px;border:1px solid var(--b1)">
+      <polyline points="${hist30.map((h,i) => {
+        const x=pad+(i/(hist30.length-1))*(w-pad*2);
+        const y=h-pad-((h.v-mn)/rng)*(h-pad*2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ')}" fill="none" stroke="var(--a1)" stroke-width="1.5"/>
+    </svg>` +
+    `<div class="sec" style="margin-bottom:4px">ÚLTIMOS 7 DIAS</div>` +
+    '<table class="dt"><thead><tr><th>DATA</th><th>USD/BRL</th><th>VAR</th></tr></thead><tbody>' +
+    hist30.slice(-7).reverse().map((h,i,arr) => {
+      const prev = arr[i+1]?.v || h.v;
+      const chg  = ((h.v - prev)/prev*100).toFixed(2);
+      const up   = h.v >= prev;
+      return `<tr>
+        <td class="dim">${h.d}</td>
+        <td class="${up?'g':'r'}" style="font-weight:700">${h.v}</td>
+        <td class="${up?'g':'r'}">${up?'+':''}${chg}%</td>
+      </tr>`;
+    }).join('') +
+    '</tbody></table>';
+}
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("[PWA] SW registrado")).catch(e=>console.warn("[PWA]",e));}</script>
+</body>
+</html>

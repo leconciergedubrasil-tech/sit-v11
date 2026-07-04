@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff41">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon.svg">
+<meta charset="UTF-8"><title>SIT · TEAMS PANEL</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg0);color:var(--t1);font-family:var(--fm);overflow:hidden;height:100vh;display:flex;flex-direction:column}
+.panel-header{height:26px;background:#000;border-bottom:1px solid var(--b3);display:flex;align-items:center;gap:6px;padding:0 8px;flex-shrink:0;cursor:move}
+.ph-title{font-size:8px;font-weight:700;color:var(--t4);font-family:var(--fu);letter-spacing:1px;flex:1}
+.ph-close{background:transparent;border:none;color:var(--t4);cursor:pointer;font-size:10px}
+.ph-close:hover{color:var(--r1)}
+.team-row{display:flex;align-items:center;gap:5px;padding:5px 8px;border-bottom:1px solid var(--b0);cursor:pointer;transition:background .1s}
+.team-row:hover{background:rgba(0,255,65,.04)}
+.team-tk{font-family:var(--fu);font-weight:700;color:var(--a1);width:36px;font-size:9px;flex-shrink:0}
+.team-name{flex:1;font-family:var(--fu);font-size:8.5px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.team-rating{font-size:6.5px;font-weight:700;padding:1px 4px;border:1px solid;flex-shrink:0}
+.team-vpi{width:34px;text-align:right;font-family:var(--fm);font-size:10px;font-weight:700;flex-shrink:0}
+.team-chg{width:34px;text-align:right;font-family:var(--fm);font-size:8px;flex-shrink:0}
+.status-bar{height:18px;background:#000;border-top:1px solid var(--b1);display:flex;align-items:center;padding:0 8px;flex-shrink:0;gap:8px}
+.sb-txt{font-size:7px;color:var(--t5);font-family:var(--fu)}
+</style>
+</head>
+<body>
+<div class="panel-header">
+  <div class="pulse-dot"></div>
+  <span class="ph-title">TIMES — VPI MONITOR</span>
+  <button class="ph-close" onclick="window.close()">✕</button>
+</div>
+<div style="flex:1;overflow-y:auto" id="teams-list"></div>
+<div class="status-bar">
+  <span class="sb-txt" id="sb-count"></span>
+  <span class="sb-txt" id="sb-time"></span>
+  <span class="sb-txt" style="margin-left:auto">TEAMS · PAINEL DESTACADO</span>
+</div>
+<script src="sit-db.js"></script>
+<script>
+const bc=new BroadcastChannel('sit_panels');
+
+function render(){
+  const db=SIT_DB.DB;
+  const keys=Object.keys(db).sort((a,b)=>db[b].vpi-db[a].vpi);
+  document.getElementById('sb-count').textContent=keys.length+' times';
+  document.getElementById('teams-list').innerHTML=keys.map(k=>{
+    const t=db[k];
+    const col=t.chgN>0?'var(--g1)':'var(--r1)';
+    const rc=t.rating==='BUY'?'buy':t.rating==='SELL'?'sell':'hold';
+    const rcC=t.rating==='BUY'?'var(--g1)':t.rating==='SELL'?'var(--r1)':'var(--a1)';
+    const rcB=t.rating==='BUY'?'var(--g3)':t.rating==='SELL'?'var(--r2)':'var(--a3)';
+    return `<div class="team-row" onclick="openTeam('${k}')">
+      <span class="team-tk">${t.tk.split('.')[0]}</span>
+      <span class="team-name">${t.n}</span>
+      <span class="team-rating" style="color:${rcC};border-color:${rcB}">${t.rating}</span>
+      <span class="team-vpi" style="color:${col}">${t.vpi}%</span>
+      <span class="team-chg" style="color:${col}">${t.chg}</span>
+    </div>`;
+  }).join('');
+}
+
+function openTeam(k){
+  // Notifica o terminal principal para navegar
+  bc.postMessage({type:'NAV',cmd:k});
+  // Abre direto também
+  window.open('team.html?team='+k,'sit_team','width=1200,height=760,menubar=no,toolbar=no,location=no');
+}
+
+setInterval(()=>{document.getElementById('sb-time').textContent=new Date().toLocaleTimeString('pt-BR');},1000);
+render();
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("[PWA] SW registrado")).catch(e=>console.warn("[PWA]",e));}</script>
+</body>
+</html>

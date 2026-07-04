@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff41">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon.svg">
+<meta charset="UTF-8">
+<title>SIT — Sport Intelligence Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+<style>
+body{
+  display:flex;align-items:center;justify-content:center;
+  height:100vh;background:#000;
+  /* grid pattern */
+  background-image:
+    linear-gradient(rgba(0,255,65,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,255,65,.03) 1px,transparent 1px);
+  background-size:32px 32px;
+}
+
+.login-outer{display:flex;flex-direction:column;align-items:center;gap:16px}
+
+.login-box{
+  width:380px;
+  background:#000;
+  border:1px solid var(--b3);
+  box-shadow:0 0 40px rgba(0,255,65,.06), inset 0 0 40px rgba(0,255,65,.02);
+  padding:28px 24px 24px;
+  display:flex;flex-direction:column;gap:0;
+}
+
+/* Header do login */
+.lh{
+  display:flex;align-items:flex-end;gap:10px;
+  padding-bottom:16px;border-bottom:1px solid var(--b2);margin-bottom:20px;
+}
+.lh-sit{
+  font-size:36px;font-weight:700;letter-spacing:6px;
+  color:var(--g1);font-family:var(--fu);line-height:1;
+}
+.lh-right{display:flex;flex-direction:column;gap:2px}
+.lh-sub{font-size:7px;letter-spacing:3px;color:var(--g4);font-family:var(--fu);text-transform:uppercase}
+.lh-v{font-size:7px;color:var(--t5);font-family:var(--fu)}
+.lh-cursor{
+  width:2px;height:28px;background:var(--g1);
+  animation:blink .8s step-end infinite;margin-right:4px;
+}
+
+/* Campo */
+.lf{display:flex;flex-direction:column;gap:3px;margin-bottom:12px}
+.lf label{
+  font-size:7px;font-weight:700;color:var(--t4);
+  font-family:var(--fu);letter-spacing:1.2px;text-transform:uppercase;
+}
+.lf input,.lf select{
+  background:var(--bg1);border:1px solid var(--b2);
+  color:var(--g1);font-family:var(--fm);font-size:10.5px;
+  padding:6px 9px;outline:none;
+  transition:border-color .15s;
+  appearance:none;
+}
+.lf input:focus,.lf select:focus{border-color:var(--g2)}
+.lf select{cursor:pointer;color:var(--t2)}
+.lf select option{background:#000;color:var(--t1)}
+
+/* Botão */
+.lbtn{
+  width:100%;padding:9px;margin-top:4px;
+  background:rgba(0,255,65,.07);border:1px solid var(--g3);
+  color:var(--g1);font-family:var(--fu);font-size:11px;
+  font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;transition:all .15s;
+}
+.lbtn:hover{background:rgba(0,255,65,.14);border-color:var(--g1)}
+.lbtn:active{transform:scale(.99)}
+
+/* Indicadores */
+.l-inds{
+  display:flex;flex-wrap:wrap;gap:3px;
+  padding:10px 0 0;margin-top:10px;
+  border-top:1px solid var(--b1);
+}
+.l-ind{
+  font-size:7px;font-family:var(--fu);font-weight:700;
+  color:var(--t5);padding:2px 5px;border:1px solid var(--b1);
+  letter-spacing:.4px;
+}
+.l-ind.active{color:var(--g3);border-color:var(--b2)}
+
+/* Footer externo */
+.l-copy{font-size:7px;color:var(--t5);font-family:var(--fu);letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<div class="login-outer">
+  <div class="login-box">
+    <div class="lh">
+      <div class="lh-cursor"></div>
+      <div class="lh-sit">SIT</div>
+      <div class="lh-right">
+        <div class="lh-sub">Sport Intelligence Terminal</div>
+        <div class="lh-v">v11 · Cardinal Protocol · 2026</div>
+      </div>
+    </div>
+
+    <div class="lf">
+      <label>Usuário / Operador</label>
+      <input type="text" id="li-user" value="operador@cardinal" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="lf">
+      <label>Senha de Acesso</label>
+      <input type="password" id="li-pass" value="cardinal2026">
+    </div>
+
+    <div class="lf">
+      <label>Plano de Acesso</label>
+      <select id="li-plan">
+        <option value="VIEWER">VIEWER · R$290/mês · 5 indicadores</option>
+        <option value="PROFESSIONAL" selected>PROFESSIONAL · R$1.900/mês · 13 indicadores</option>
+        <option value="INSTITUTIONAL">INSTITUTIONAL · R$9.900/mês · API + DataBridge</option>
+        <option value="DIAMOND">DIAMOND · R$19.900/mês · WebSocket 0.2s</option>
+      </select>
+    </div>
+
+    <button class="lbtn" onclick="doLogin()">ACESSAR TERMINAL &lt;GO&gt;</button>
+
+    <div class="l-inds">
+      <span class="l-ind active">VPI</span>
+      <span class="l-ind active">PBI</span>
+      <span class="l-ind active">KII</span>
+      <span class="l-ind active">RSI</span>
+      <span class="l-ind active">TDM</span>
+      <span class="l-ind active">GRAHAM</span>
+      <span class="l-ind">BUFFETT</span>
+      <span class="l-ind">BLACKROCK</span>
+      <span class="l-ind">NASH</span>
+      <span class="l-ind">JUNG</span>
+      <span class="l-ind">FEYNMANN</span>
+      <span class="l-ind">SCHRÖDINGER</span>
+      <span class="l-ind">SIT-QUANT</span>
+    </div>
+  </div>
+
+  <div class="l-copy">© 2026 SIT — CARDINAL PROTOCOL · USO RESTRITO · CONFIDENCIAL</div>
+</div>
+
+<script src="sit-db.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+// Já logado? Vai direto
+const s = SIT.getSession();
+if (s && s.user) window.location.href = 'mon.html';
+
+// Habilitar indicadores pelo plano
+document.getElementById('li-plan').addEventListener('change', function() {
+  const plan = this.value;
+  const inds = document.querySelectorAll('.l-ind');
+  const limites = {VIEWER:5, PROFESSIONAL:6, INSTITUTIONAL:10, DIAMOND:13};
+  const lim = limites[plan] || 5;
+  inds.forEach((el,i) => {
+    el.classList.toggle('active', i < lim);
+  });
+});
+
+function doLogin() {
+  const user  = document.getElementById('li-user').value.trim() || 'operador';
+  const level = document.getElementById('li-plan').value;
+  SIT.setSession({ user, level, loginAt:Date.now(), lastTeam:'FLA' });
+  window.location.href = 'mon.html';
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === 'F8') doLogin();
+});
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("[PWA] SW registrado")).catch(e=>console.warn("[PWA]",e));}</script>
+</body>
+</html>
