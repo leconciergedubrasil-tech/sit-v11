@@ -7,7 +7,7 @@
 'use strict';
 
 const SB_URL = localStorage.getItem('sit_sb_url') || 'https://qddtpccbfpgzcexjuokh.supabase.co';
-const SB_KEY = localStorage.getItem('sit_sb_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkZHRwY2NiZnBnemNleGp1b2toIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0MjIyNjQsImV4cCI6MjA2Mjk5ODI2NH0.Ll9W_qFg3pJFJkR3PYkxYXGXVK8Pfn1iyY-GqWCmesk';
+const SB_KEY = localStorage.getItem('sit_sb_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkZHRwY2NiZnBnemNleGp1b2toIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1Mjg4NzUsImV4cCI6MjA5MzEwNDg3NX0.Ll9W_qFg3pJFJkR3PYkxYXGXVK8Pfn1iyY-GqWCmesk';
 const SB_OK  = !!(SB_URL && SB_KEY);
 
 const SB = {
