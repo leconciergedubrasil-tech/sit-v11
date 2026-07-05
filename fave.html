@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff41">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon.svg">
+<meta charset="UTF-8"><title>SIT · FAVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+<style>
+.fave-card{
+  display:flex;align-items:center;gap:8px;padding:7px 10px;
+  border:1px solid var(--b1);background:var(--bg1);margin-bottom:4px;
+  cursor:pointer;transition:all .12s;
+}
+.fave-card:hover{border-color:var(--b3);background:var(--bg2)}
+.fave-tk{font-size:14px;font-weight:700;color:var(--a1);font-family:var(--fu);min-width:52px}
+.fave-name{flex:1;font-family:var(--fu);font-size:9px;color:var(--t2)}
+.fave-vpi{font-size:13px;font-weight:700;font-family:var(--fu);min-width:42px;text-align:right}
+.fave-chg{font-size:9px;font-family:var(--fm);min-width:38px;text-align:right}
+.fave-del{background:transparent;border:1px solid var(--b2);color:var(--r1);
+  font-family:var(--fu);font-size:7px;padding:2px 7px;cursor:pointer;
+  transition:all .1s;flex-shrink:0}
+.fave-del:hover{border-color:var(--r2);background:rgba(255,51,51,.08)}
+.fave-ind{display:flex;gap:8px;font-size:8px;font-family:var(--fu);color:var(--t4);margin-top:2px}
+.fave-ind span b{font-weight:700}
+.fave-date{font-size:7px;color:var(--t5);font-family:var(--fu);flex-shrink:0}
+.empty-fave{text-align:center;padding:40px 20px;color:var(--t4);font-family:var(--fu)}
+.section-hd{font-size:7px;font-weight:700;color:var(--t4);letter-spacing:1.5px;
+  font-family:var(--fu);padding:8px 0 4px;text-transform:uppercase;
+  border-bottom:1px solid var(--b1);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body class="sit-layout">
+<div id="header"></div>
+<div class="sit-body">
+  <div class="nav-lateral">
+    <div class="nav-section">
+      <div class="nav-sec-hd">Funções</div>
+      <div class="nav-item" onclick="SIT.go('MON')"><span class="t3">◉</span><span>MONITOR</span></div>
+      <div class="nav-item active"><span class="a">★</span><span>FAVORITOS</span></div>
+      <div class="nav-item" onclick="SIT.go('ALERT')"><span class="r">⚡</span><span>ALERTAS</span></div>
+      <div class="nav-item" onclick="SIT.go('MRKT')"><span class="t3">↔</span><span>MERCADO</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-hd">Ações</div>
+      <div class="nav-item" onclick="clearAll()"><span class="r">✕</span><span>LIMPAR TUDO</span></div>
+      <div class="nav-item" onclick="exportFaves()"><span class="t3">↓</span><span>EXPORTAR</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-hd">Times</div>
+      <div id="nav-teams"></div>
+    </div>
+  </div>
+
+  <div class="sit-content">
+    <div style="background:var(--bg0);padding:6px 12px;border-bottom:1px solid var(--b3);display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span style="font-size:18px;font-weight:700;color:var(--a1);font-family:var(--fu)">★ FAVE</span>
+      <span style="font-size:9px;color:var(--t3);font-family:var(--fu)">WATCHLIST PERSONALIZADA</span>
+      <span class="bg" id="fave-count" style="margin-left:auto;border-color:var(--b2);color:var(--t3)">0 itens</span>
+      <button onclick="window.history.back()" style="padding:2px 8px;font-size:7.5px;border:1px solid var(--b2);background:transparent;color:var(--g2);cursor:pointer;font-family:var(--fu)">← BACK</button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:10px 12px" id="fave-content"></div>
+  </div>
+</div>
+<div id="statusbar"></div>
+<script src="sit-db.js"></script>
+<script src="sit-indicators.js"></script>
+<script src="sit-auth.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+const session = SIT.boot('FAVE');
+if (session) {
+  AUTH.boot();
+  SIT.setBreadcrumb([{label:'MON',href:'MON'},{label:'★ FAVORITOS'}]);
+  const db = SIT_DB.DB;
+
+  // Nav times
+  document.getElementById('nav-teams').innerHTML = Object.entries(db).map(([k,t])=>`
+    <div class="nav-item" onclick="SIT.go('${k}')">
+      <span class="a" style="font-size:8px">★</span>
+      <span style="flex:1">${t.tk}</span>
+      <span class="nav-item-val ${t.chgN>0?'tup':'tdn'}">${t.vpi}%</span>
+    </div>`).join('');
+
+  function getFaves(){
+    try{ return JSON.parse(localStorage.getItem('sit_faves')||'{"teams":[],"athletes":[]}'); }
+    catch(e){ return {teams:[],athletes:[]}; }
+  }
+  function saveFaves(f){ localStorage.setItem('sit_faves',JSON.stringify(f)); }
+
+  function removeFaveTeam(k){
+    const f=getFaves(); f.teams=f.teams.filter(x=>x!==k); saveFaves(f); render();
+  }
+  function removeFaveAthlete(key){
+    const f=getFaves(); f.athletes=f.athletes.filter(x=>x!==key); saveFaves(f); render();
+  }
+
+  window.clearAll=function(){
+    if(confirm('Limpar todos os favoritos?')){ saveFaves({teams:[],athletes:[]}); render(); }
+  };
+
+  window.exportFaves=function(){
+    const f=getFaves();
+    const lines=['SIT v11 — WATCHLIST EXPORTADA','Cardinal Protocol','','=== TIMES ===',
+      ...f.teams.map(k=>{ const t=db[k]; return t?`${t.tk} · ${t.n} · VPI:${t.vpi}%`:'—'; }),
+      '','=== ATLETAS ===',
+      ...f.athletes.map(key=>{ const [tk,name]=key.split('/'); return `${name} · ${tk}`; }),
+    ].join('\n');
+    const a=document.createElement('a');
+    a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(lines);
+    a.download='sit-watchlist.txt'; a.click();
+  };
+
+  window.removeFaveTeam   = removeFaveTeam;
+  window.removeFaveAthlete= removeFaveAthlete;
+
+  function render(){
+    const f    = getFaves();
+    const total= f.teams.length + f.athletes.length;
+    document.getElementById('fave-count').textContent = total+' itens';
+
+    const el = document.getElementById('fave-content');
+    if(!total){
+      el.innerHTML=`<div class="empty-fave">
+        <div style="font-size:24px;margin-bottom:12px">★</div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:8px">Nenhum favorito ainda.</div>
+        <div style="font-size:9px;color:var(--t5)">
+          Para favoritar: abra o dossiê de um time ou atleta<br>
+          e clique em <b style="color:var(--a1)">★ FAVE</b>.
+        </div>
+      </div>`;
+      return;
+    }
+
+    let html = '';
+
+    // Seção times
+    if(f.teams.length){
+      html += `<div class="section-hd">
+        <span class="a">★</span> TIMES FAVORITOS
+        <span class="dim" style="margin-left:auto;font-weight:400">${f.teams.length}</span>
+      </div>`;
+      html += f.teams.map(k=>{
+        const t=db[k];
+        if(!t) return '';
+        const ind=IND.calcAll(t);
+        const vpiCol=ind.vpi>=75?'var(--g1)':ind.vpi>=60?'var(--a1)':'var(--r1)';
+        const chgCol=t.chgN>0?'var(--g1)':'var(--r1)';
+        const rc=t.rating==='BUY'?'buy':t.rating==='SELL'?'sell':'hold';
+        return `<div class="fave-card" onclick="SIT.go('${k}')">
+          <span class="fave-tk">${t.tk}</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <span class="fave-name">${t.n}</span>
+              <span class="bg ${rc}">${t.rating} ${t.score}</span>
+            </div>
+            <div class="fave-ind">
+              <span>VPI <b style="color:${vpiCol}">${ind.vpi}%</b></span>
+              <span>PBI <b class="${ind.pbi<20?'g':ind.pbi<30?'a':'r'}">${ind.pbi}%</b></span>
+              <span>RSI <b style="color:${IND.RSI.label(ind.rsi).col}">${ind.rsi}</b></span>
+              <span>TDM <b style="color:${IND.TDM.color(ind.tdm)}">${ind.tdm}</b></span>
+              <span>QUANT <b class="${ind.quant.score>=80?'g':ind.quant.score>=65?'a':'r'}">${ind.quant.score.toFixed(1)} ${ind.quant.rating}</b></span>
+            </div>
+          </div>
+          <span class="fave-vpi" style="color:${vpiCol}">${ind.vpi}%</span>
+          <span class="fave-chg" style="color:${chgCol}">${t.chg}</span>
+          <button class="fave-del" onclick="event.stopPropagation();removeFaveTeam('${k}')">✕ REMOVE</button>
+        </div>`;
+      }).join('');
+    }
+
+    // Seção atletas
+    if(f.athletes.length){
+      html += `<div class="section-hd" style="margin-top:12px">
+        <span class="a">★</span> ATLETAS FAVORITOS
+        <span class="dim" style="margin-left:auto;font-weight:400">${f.athletes.length}</span>
+      </div>`;
+      html += f.athletes.map(key=>{
+        const [tk,name]=key.split('/');
+        const t=db[tk];
+        const a=t?(t.athletes||[]).find(x=>x.n===name):null;
+        if(!a||!t) return '';
+        const vc=IND.VPI._calcAthlete(a);
+        const vc_col=vc>=80?'var(--g1)':vc>=65?'var(--a1)':'var(--r1)';
+        const url=`athlete.html?team=${tk}&athlete=${encodeURIComponent(name)}`;
+        return `<div class="fave-card" onclick="window.location.href='${url}'">
+          <div style="flex-shrink:0;width:36px;text-align:center">
+            <div style="font-size:9px;font-weight:700;font-family:var(--fu);color:var(--t3)">${a.pos}</div>
+            <div style="font-size:7px;color:var(--a1);font-family:var(--fu)">${t.tk}</div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;font-weight:600;color:var(--t1);margin-bottom:2px">${name}</div>
+            <div class="fave-ind">
+              <span>VPI <b style="color:${vc_col}">${vc}%</b></span>
+              <span>PBI <b class="${a.pbi<20?'g':a.pbi<30?'a':'r'}">${a.pbi}%</b></span>
+              <span>GOLS <b class="g">${a.gols}</b></span>
+              <span>ASS <b class="a">${a.ass}</b></span>
+              <span>${a.nat} · ${a.age}a</span>
+            </div>
+          </div>
+          <span style="font-size:13px;font-weight:700;font-family:var(--fu);color:${vc_col};min-width:38px;text-align:right">${vc}%</span>
+          <button class="fave-del" onclick="event.stopPropagation();removeFaveAthlete('${key}')">✕ REMOVE</button>
+        </div>`;
+      }).join('');
+    }
+
+    el.innerHTML = html;
+  }
+
+  render();
+}
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("[PWA] SW registrado")).catch(e=>console.warn("[PWA]",e));}</script>
+</body>
+</html>

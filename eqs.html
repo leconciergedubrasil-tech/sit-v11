@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff41">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon.svg">
+<meta charset="UTF-8"><title>SIT · EQS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+</head>
+<body class="sit-layout">
+<div id="header"></div>
+<div class="sit-body">
+  <div class="nav-lateral">
+    <div class="nav-section">
+      <div class="nav-sec-hd">Funções</div>
+      <div class="nav-item" onclick="SIT.go('MON')"><span class="t3">◉</span><span>MONITOR</span></div>
+      <div class="nav-item active"><span class="g">■</span><span>EQS</span></div>
+      <div class="nav-item" onclick="SIT.go('COPA')"><span style="font-size:9px">🏆</span><span>COPA 2026</span></div>
+      <div class="nav-item" onclick="SIT.go('HELP')"><span class="t3">?</span><span>HELP</span></div>
+    </div>
+    <div class="nav-section"><div class="nav-sec-hd">Times</div><div id="nav-teams"></div></div>
+  </div>
+  <div class="sit-content">
+    <div style="background:var(--bg0);padding:6px 12px;border-bottom:1px solid var(--b3);display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <span style="font-size:18px;font-weight:700;color:var(--a1);font-family:var(--fu)">EQS</span>
+      <button onclick="window.history.back()" style="margin-left:auto;padding:2px 8px;font-size:7.5px;border:1px solid var(--b2);background:transparent;color:var(--g2);cursor:pointer;font-family:var(--fu)">← BACK</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px" id="main-content"></div>
+  </div>
+</div>
+<div id="statusbar"></div>
+<script src="sit-db.js"></script>
+<script src="sit-indicators.js"></script>
+<script src="sit-auth.js"></script>
+<script src="sit-core.js"></script>
+<script src="sit-panels.js"></script>
+<script src="sit-supabase.js"></script>
+<script>
+const session = SIT.boot('EQS');
+if (session) {
+  AUTH.boot();
+  SIT.setBreadcrumb([{label:'MON',href:'MON'},{label:'EQS'}]);
+  const db = SIT_DB.DB;
+  document.getElementById('nav-teams').innerHTML = Object.entries(db).map(([k,t]) =>
+    '<div class="nav-item" onclick="SIT.go(\''+k+'\')">'+
+    '<span class="'+(t.rating==='BUY'?'g':t.rating==='SELL'?'r':'a')+'" style="font-size:7px">●</span>'+
+    '<span style="flex:1">'+t.tk+'</span>'+
+    '<span class="nav-item-val '+(t.chgN>0?'tup':'tdn')+'">'+t.vpi+'%</span></div>'
+  ).join('');
+  document.getElementById('main-content').innerHTML = render();
+}
+function render() {
+  const db = SIT_DB.DB;
+  const teams = Object.entries(db);
+  const params = new URLSearchParams(window.location.search);
+  const filter = params.get('filter') || '';
+  
+  let rows = teams.map(([k,t]) => {
+    const ind = IND.calcAll(t);
+    return {k, t, ind};
+  });
+  
+  // Aplicar filtro
+  if (filter === 'BUY')  rows = rows.filter(r => r.t.rating === 'BUY');
+  if (filter === 'SELL') rows = rows.filter(r => r.t.rating === 'SELL');
+  if (['AAA','AA','A','BB'].includes(filter)) rows = rows.filter(r => r.ind.quant?.rating === filter);
+  
+  // Ordenar por VPI calculado
+  rows.sort((a,b) => b.ind.vpi - a.ind.vpi);
+  
+  return '<div class="sec">EQS — EQUITY SCREENER · '+rows.length+' ATIVOS</div>'+
+    '<div style="display:flex;gap:6px;margin-bottom:8px">'+
+    ['ALL','BUY','HOLD','SELL','AAA','AA','A','BB'].map(f =>
+
+      '<button onclick="window.location.href=\'eqs.html?filter='+f+'\'" style="padding:3px 10px;font-size:8px;font-family:var(--fu);font-weight:700;border:1px solid var(--b2);background:'+(filter===f||(!filter&&f==='ALL')?'var(--g5)':'transparent')+';color:'+(filter===f||(!filter&&f==='ALL')?'var(--g1)':'var(--t3)')+';cursor:pointer">'+f+'</button>'
+    ).join('') +
+    '</div>'+
+    '<table class="dt"><thead><tr>'+
+    '<th>TICKER</th><th>TIME</th><th>LIGA</th><th>VPI</th><th>PBI</th>'+
+    '<th>RSI</th><th>GRAHAM</th><th>NASH</th><th>SIT-QUANT</th><th>RATING</th></tr></thead><tbody>'+
+    rows.map(({k,t,ind}) => {
+      const rc = t.rating==='BUY'?'buy':t.rating==='SELL'?'sell':'hold';
+      return '<tr onclick="SIT.go(\''+k+'\')" style="cursor:pointer">'+
+        '<td class="a" style="font-weight:700">'+t.tk+'</td>'+
+        '<td>'+t.n.slice(0,18)+'</td>'+
+        '<td class="dim">'+t.liga+'</td>'+
+        '<td class="'+(ind.vpi>=75?'g':ind.vpi>=60?'a':'r')+'" style="font-weight:700">'+ind.vpi+'%</td>'+
+        '<td class="'+(ind.pbi<20?'g':ind.pbi<30?'a':'r')+'">'+ind.pbi+'%</td>'+
+        '<td style="color:'+IND.RSI.label(ind.rsi).col+'">'+ind.rsi+'</td>'+
+        '<td class="'+(ind.graham.margin>30?'g':ind.graham.margin>10?'a':'r')+'">'+ind.graham.margin.toFixed(1)+'%</td>'+
+        '<td class="'+(ind.nash.score>70?'g':ind.nash.score>50?'a':'r')+'">'+ind.nash.score.toFixed(1)+'</td>'+
+        '<td class="'+(ind.quant.score>=80?'g':ind.quant.score>=65?'a':'r')+'" style="font-weight:700">'+ind.quant.score.toFixed(1)+' '+ind.quant.rating+'</td>'+
+        '<td><span class="bg '+rc+'">'+t.rating+'</span></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("[PWA] SW registrado")).catch(e=>console.warn("[PWA]",e));}</script>
+</body>
+</html>

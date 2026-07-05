@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff41">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/icon.svg">
+<meta charset="UTF-8"><title>SIT · NEWS</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sit-shell.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg0);color:var(--t1);font-family:var(--fm);
+  overflow:hidden;height:100vh;display:flex;flex-direction:column;
+  -webkit-app-region:drag; /* permite arrastar a janela */
+}
+.panel-header{
+  height:26px;background:#000;border-bottom:1px solid var(--b3);
+  display:flex;align-items:center;gap:6px;padding:0 8px;
+  flex-shrink:0;cursor:move;-webkit-app-region:drag;
+}
+.ph-title{font-size:8px;font-weight:700;color:var(--t4);font-family:var(--fu);letter-spacing:1px;flex:1}
+.ph-live{display:flex;align-items:center;gap:4px;font-size:7px;color:var(--g3);font-family:var(--fu)}
+.ph-close{
+  background:transparent;border:none;color:var(--t4);cursor:pointer;
+  font-size:10px;padding:0 2px;-webkit-app-region:no-drag;
+}
+.ph-close:hover{color:var(--r1)}
+.news-list{flex:1;overflow-y:auto;padding:4px 6px}
+.news-item{
+  display:flex;gap:6px;padding:5px 2px;border-bottom:1px solid var(--b0);
+  cursor:pointer;transition:background .1s;
+}
+.news-item:hover{background:rgba(0,255,65,.02)}
+.news-tag{
+  font-size:6.5px;font-weight:700;padding:1px 4px;font-family:var(--fu);
+  letter-spacing:.5px;border:1px solid;height:fit-content;margin-top:1px;flex-shrink:0;
+}
+.news-txt{font-size:9px;color:var(--t1);line-height:1.4;flex:1}
+.news-time{font-size:7px;color:var(--t5);font-family:var(--fu);flex-shrink:0;margin-top:1px}
+.status-bar{height:18px;background:#000;border-top:1px solid var(--b1);
+  display:flex;align-items:center;padding:0 8px;flex-shrink:0;gap:8px}
+.sb-txt{font-size:7px;color:var(--t5);font-family:var(--fu)}
+</style>
+</head>
+<body>
+<div class="panel-header">
+  <div class="pulse-dot"></div>
+  <span class="ph-title">NEWS · INSIDER FEED</span>
+  <span class="ph-live">● AO VIVO</span>
+  <span id="ph-count" style="font-size:7px;color:var(--t5);font-family:var(--fu)"></span>
+  <button class="ph-close" onclick="window.close()" title="Fechar">✕</button>
+</div>
+<div class="news-list" id="news-list"></div>
+<div class="status-bar">
+  <span class="sb-txt">SIT v11 · CARDINAL</span>
+  <span class="sb-txt" id="sb-time"></span>
+  <span class="sb-txt" style="margin-left:auto">NEWS · PAINEL DESTACADO</span>
+</div>
+<script src="sit-db.js"></script>
+<script>
+const TAG_COLORS={brk:'var(--r1)',ins:'var(--a1)',upd:'var(--g2)',rpt:'var(--c1)'};
+const TAG_LABELS={brk:'BRK',ins:'INS',upd:'UPD',rpt:'RPT'};
+
+function render(){
+  const news=SIT_DB.NEWS||[];
+  document.getElementById('ph-count').textContent=news.length+' items';
+  document.getElementById('news-list').innerHTML=news.map(n=>{
+    const col=TAG_COLORS[n.tag]||'var(--t3)';
+    return `<div class="news-item">
+      <span class="news-tag" style="color:${col};border-color:${col}20;background:${col}10">${TAG_LABELS[n.tag]||n.tag.toUpperCase()}</span>
+      <span class="news-txt">${n.txt}</span>
+      <span class="news-time">${n.time}</span>
+    </div>`;
+  }).join('');
+}
+
+// Clock
+setInterval(()=>{
+  document.getElementById('sb-time').textContent=new Date().toLocaleTimeString('pt-BR');
+},1000);
+
+// BroadcastChannel — recebe atualizações do terminal principal
+const bc=new BroadcastChannel('sit_panels');
+bc.onmessage=e=>{
+  if(e.data.type==='NEWS_UPDATE') render();
+};
+
+render();
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(()=>console.log("[PWA] SW registrado")).catch(e=>console.warn("[PWA]",e));}</script>
+</body>
+</html>

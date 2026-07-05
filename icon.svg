@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#000000"/>
+  <rect x="40" y="40" width="432" height="432" fill="none" stroke="#00ff41" stroke-width="8"/>
+  <text x="256" y="300" text-anchor="middle" font-family="monospace" font-size="200" font-weight="bold" fill="#00ff41">SIT</text>
+  <text x="256" y="380" text-anchor="middle" font-family="monospace" font-size="48" fill="#005511">CARDINAL PROTOCOL</text>
+</svg>
