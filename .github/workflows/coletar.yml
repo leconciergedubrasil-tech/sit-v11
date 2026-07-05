@@ -1,4 +1,4 @@
-name: SIT — Coletar Dados
+name: SIT Coletar Dados
 
 on:
   schedule:
