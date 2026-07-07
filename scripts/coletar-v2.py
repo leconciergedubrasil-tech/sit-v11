@@ -133,6 +133,58 @@ def generate_key(name):
     else:                 key = words[0][0] + words[1][0] + words[2][0]
     return key.strip('.')[:5]
 
+
+def collect_squad(fd_id, team_key, team_name):
+    """Coletar elenco completo de um time via football-data.org"""
+    data = fd(f'teams/{fd_id}', delay=6.5)
+    if not data: return 0
+    
+    squad = data.get('squad', [])
+    if not squad: return 0
+    
+    rows = []
+    pos_map = {
+        'Goalkeeper': 'GOL', 'Defence': 'ZAG', 'Midfield': 'MC',
+        'Offence': 'CA', 'Winger': 'PE', 'Forward': 'CA',
+        'Attacking Midfield': 'MAT', 'Central Midfield': 'MC',
+        'Defensive Midfield': 'MD', 'Centre-Back': 'ZAG',
+        'Left-Back': 'LE', 'Right-Back': 'LD',
+    }
+    
+    for p in squad:
+        name = p.get('name', '')
+        if not name: continue
+        pos_raw = p.get('position', 'MC')
+        pos = pos_map.get(pos_raw, 'MC')
+        nat = p.get('nationality', '')
+        age_raw = p.get('dateOfBirth', '')
+        age = 0
+        if age_raw:
+            try: age = (date.today()-date.fromisoformat(age_raw[:10])).days//365
+            except: pass
+        
+        rows.append({
+            'team_key':    team_key,
+            'name':        name,
+            'short_name':  name.split()[-1] if name else '',
+            'position':    pos,
+            'nationality': nat,
+            'age':         age or None,
+            'vpi':         70.0,
+            'pbi':         22.0,
+            'goals':       0,
+            'assists':     0,
+            'minutes':     0,
+            'data_source': 'football-data.org',
+            'updated_at':  NOW,
+        })
+    
+    if rows:
+        ok = sb_upsert('sit_athletes', rows)
+        print(f'    {"✓" if ok else "✗"} {len(rows)} atletas ({team_name[:20]})')
+        return len(rows)
+    return 0
+
 def collect_fx():
     print('\n[FX] Coletando câmbio...')
     d = fetch('https://open.er-api.com/v6/latest/USD')
@@ -225,6 +277,16 @@ def collect_liga(liga_fd, sit_liga):
     if team_rows:
         ok = sb_upsert('sit_teams', team_rows)
         print(f'  {"✓" if ok else "✗"} {len(team_rows)} times salvos')
+    
+    # Coletar elenco dos primeiros 5 times de cada liga (evitar rate limit)
+    print(f'  [ELENCOS] Coletando atletas...')
+    total_athl = 0
+    for tr in team_rows[:5]:
+        if tr.get('fd_id'):
+            n = collect_squad(tr['fd_id'], tr['team_key'], tr['name'])
+            total_athl += n
+    if total_athl:
+        print(f'  ✓ {total_athl} atletas coletados')
 
     return team_rows
 
