@@ -377,19 +377,19 @@ const DB = {
 
 // ── COPA 2026 — Grupos ────────────────────────────────────
 const COPA_GROUPS = {
-  A:{nations:['EUA','Uruguai','Panamá','Bolívia']},
-  B:{nations:['Argentina','Peru','Chile','Canadá']},
-  C:{nations:['México','Jamaica','Venezuela','Equador']},
-  D:{nations:['Brasil','Colômbia','Paraguai','Costa Rica']},
-  E:{nations:['Espanha','Croácia','Albânia','Marrocos']},
-  F:{nations:['Portugal','Polônia','Turquia','Geórgia']},
-  G:{nations:['França','Bélgica','Eslováquia','Camarões']},
-  H:{nations:['Alemanha','Japão','Austrália','Argélia']},
-  I:{nations:['Inglaterra','Sérvia','Eslovênia','Quênia']},
-  J:{nations:['Holanda','Irã','Senegal','Iraque']},
-  K:{nations:['Itália','Coreia do Sul','Nova Zelândia','Guiné']},
-  L:{nations:['Arábia Saudita','Gana','Suíça','Etiópia']},
-};
+  A:{nations:['Portugal','Croácia','Tanzânia','Indonésia']},
+  B:{nations:['Argentina','Chile','Peru','Albânia']},
+  C:{nations:['Brasil','Marrocos','Haiti','Escócia']},
+  D:{nations:['França','Bélgica','México','Arábia Saudita']},
+  E:{nations:['Espanha','Japão','Camarões','Equador']},
+  F:{nations:['Alemanha','Austrália','Argélia','Turquia']},
+  G:{nations:['Holanda','Irã','Senegal','Quirguistão']},
+  H:{nations:['Inglaterra','Sérvia','Etiópia','Rep. Dominicana']},
+  I:{nations:['Noruega','México','Panamá','Bolívia']},
+  J:{nations:['Colômbia','EUA','Canadá','Nova Zelândia']},
+  K:{nations:['Itália','Coreia do Sul','Costa Rica','Costa do Marfim']},
+  L:{nations:['Suíça','Uruguai','Venezuela','Egito']},
+}
 
 // ── COPA 2026 — Seleções com elencos completos ────────────
 const COPA_NATIONS = [
@@ -397,8 +397,8 @@ const COPA_NATIONS = [
   {
     name:'Brasil',code:'BRA',flag:'🇧🇷',grupo:'Grupo D',conf:'CONMEBOL',
     fifa:4,odds:'4.5',vpi:88,pbi:16,kii:10,
-    coach:'Dorival Jr',style:'Alta pressão, transição rápida, talento individual máximo.',
-    prob:22,rating:'AAA',
+    coach:'Carlo Ancelotti',style:'Alta pressão, transição rápida, talento individual máximo.',
+    prob:0,rating:'ELIMINADO',fase:'Oitavas (Noruega 2-1)',
     athletes:[
       {n:'Vinicius Jr', pos:'PE',  vpi:92,pbi:11,clube:'Real Madrid',    gols:8, nat:'Brasil'},
       {n:'Rodrygo',     pos:'PD',  vpi:83,pbi:17,clube:'Real Madrid',    gols:5, nat:'Brasil'},
@@ -687,9 +687,47 @@ const FX_BASE = {
 };
 
 // ── EXPORT ────────────────────────────────────────────────
+
+// ── QUARTAS DE FINAL — Copa 2026 ─────────────────────────
+const COPA_QUARTAS = [
+  {
+    jogo:1, data:'2026-07-09', hora:'17:00', cidade:'Boston',
+    home:{code:'MAR',name:'Marrocos',flag:'🇲🇦'},
+    away:{code:'FRA',name:'França',  flag:'🇫🇷'},
+    status:'AGENDADO', placar:null,
+  },
+  {
+    jogo:2, data:'2026-07-10', hora:'16:00', cidade:'Miami',
+    home:{code:'ESP',name:'Espanha', flag:'🇪🇸'},
+    away:{code:'BEL',name:'Bélgica', flag:'🇧🇪'},
+    status:'AGENDADO', placar:null,
+  },
+  {
+    jogo:3, data:'2026-07-10', hora:'20:00', cidade:'Los Angeles',
+    home:{code:'NOR',name:'Noruega',  flag:'🇳🇴'},
+    away:{code:'ENG',name:'Inglaterra',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+    status:'AGENDADO', placar:null,
+  },
+  {
+    jogo:4, data:'2026-07-11', hora:'22:00', cidade:'Kansas City',
+    home:{code:'ARG',name:'Argentina',flag:'🇦🇷'},
+    away:{code:'EGY',name:'Egito',    flag:'🇪🇬'},
+    status:'AGENDADO', placar:null,
+  },
+];
+
+// ── SEMIFINAIS ────────────────────────────────────────────
+const COPA_SEMIS = [
+  {jogo:1, data:'2026-07-14', hora:'16:00', status:'AGUARDANDO'},
+  {jogo:2, data:'2026-07-15', hora:'16:00', status:'AGUARDANDO'},
+];
+
+const COPA_FINAL = {data:'2026-07-19', hora:'16:00', cidade:'Nova York/MetLife', status:'AGUARDANDO'};
+
 if (typeof window !== 'undefined') {
   window.SIT_DB = {
     DB, COPA_GROUPS, COPA_NATIONS, COPA_RANK,
+    COPA_QUARTAS, COPA_SEMIS, COPA_FINAL,
     NEWS, MAESTRO, ANR_HISTORY, ECO_DATA, FX_BASE
   };
 }

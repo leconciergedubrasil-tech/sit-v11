@@ -8,7 +8,9 @@ import os, json, time, sys, math
 from datetime import datetime, timezone, date
 import urllib.request, urllib.error, urllib.parse
 
-FD_API_KEY   = os.environ.get('FD_API_KEY', '')
+FD_API_KEY    = os.environ.get('FD_API_KEY', '')
+RAPID_API_KEY = os.environ.get('RAPID_API_KEY', '62f175b146msh1c15d0dc3145aafp1fd6f4jsn4e740bf01163')
+GNEWS_KEY     = os.environ.get('GNEWS_KEY', '61b407e8999072a8c635075a935ca35e')
 SUPABASE_URL = os.environ.get('SUPABASE_URL', '')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
 NOW          = datetime.now(timezone.utc).isoformat()
@@ -64,7 +66,7 @@ def sb_upsert(table, rows, on_conflict='team_key'):
                 'Content-Type':  'application/json',
                 'apikey':        SUPABASE_KEY,
                 'Authorization': f'Bearer {SUPABASE_KEY}',
-                'Prefer':        'resolution=merge-duplicates,return=minimal',
+                'Prefer':        'resolution=merge-duplicates,return=representation',
             })
         try:
             with urllib.request.urlopen(req, timeout=15): pass
@@ -185,6 +187,58 @@ def collect_squad(fd_id, team_key, team_name):
         return len(rows)
     return 0
 
+
+def collect_squad_rapid(team_name, team_key, liga_id):
+    """Buscar elenco via soccer-data6 RapidAPI"""
+    if not RAPID_API_KEY: return 0
+    try:
+        query = urllib.parse.quote(team_name)
+        url = f'https://soccer-data6.p.rapidapi.com/soccerdata/teaminfo/{query}'
+        req = urllib.request.Request(url, headers={
+            'x-rapidapi-key':  RAPID_API_KEY,
+            'x-rapidapi-host': 'soccer-data6.p.rapidapi.com',
+            'Content-Type':    'application/json',
+        })
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read())
+        time.sleep(1)
+        
+        players = data.get('players', data.get('squad', []))
+        if not players: return 0
+        
+        pos_map = {'GK':'GOL','CB':'ZAG','LB':'LE','RB':'LD',
+                   'CM':'MC','DM':'MD','AM':'MAT','LW':'PE',
+                   'RW':'PD','ST':'CA','CF':'CA','FW':'CA'}
+        rows = []
+        for p in players:
+            name = p.get('name', p.get('player', ''))
+            if not name: continue
+            pos = pos_map.get(p.get('position','CM'), 'MC')
+            age = p.get('age', 0) or 0
+            nat = p.get('nationality', '')
+            rows.append({
+                'team_key':    team_key,
+                'name':        name,
+                'short_name':  name.split()[-1],
+                'position':    pos,
+                'nationality': nat,
+                'age':         age or None,
+                'vpi':         70.0,
+                'pbi':         22.0,
+                'goals':       p.get('goals', 0) or 0,
+                'assists':     p.get('assists', 0) or 0,
+                'minutes':     p.get('minutes', 0) or 0,
+                'data_source': 'soccer-data6',
+                'updated_at':  NOW,
+            })
+        if rows:
+            ok = sb_upsert('sit_athletes', rows)
+            return len(rows) if ok else 0
+        return 0
+    except Exception as e:
+        print(f'    RapidAPI squad err: {e}')
+        return 0
+
 def collect_fx():
     print('\n[FX] Coletando câmbio...')
     d = fetch('https://open.er-api.com/v6/latest/USD')
@@ -278,13 +332,18 @@ def collect_liga(liga_fd, sit_liga):
         ok = sb_upsert('sit_teams', team_rows)
         print(f'  {"✓" if ok else "✗"} {len(team_rows)} times salvos')
     
-    # Coletar elenco dos primeiros 5 times de cada liga (evitar rate limit)
+    # Coletar elenco via RapidAPI (todos os times)
     print(f'  [ELENCOS] Coletando atletas...')
     total_athl = 0
-    for tr in team_rows[:5]:
-        if tr.get('fd_id'):
-            n = collect_squad(tr['fd_id'], tr['team_key'], tr['name'])
-            total_athl += n
+    for tr in team_rows:
+        n = collect_squad_rapid(tr['name'], tr['team_key'], sit_liga)
+        total_athl += n
+    # Fallback: football-data.org para os primeiros 5
+    if total_athl == 0:
+        for tr in team_rows[:5]:
+            if tr.get('fd_id'):
+                n = collect_squad(tr['fd_id'], tr['team_key'], tr['name'])
+                total_athl += n
     if total_athl:
         print(f'  ✓ {total_athl} atletas coletados')
 
